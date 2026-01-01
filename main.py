@@ -12,7 +12,7 @@ HOLDING_COST = 18.50        # Storage/Power cost per unit
 # Risk Parameters
 MAX_DAILY = 50
 AVG_DAILY = 33
-LEAD_TIME = 14              # Days
+LEAD_TIME = 21              # Updated: Supply chain delay
 
 def run_simulation():
     print("--- 🏭 Digital Capacity Optimizer: Munich ---")
@@ -28,6 +28,7 @@ def run_simulation():
     # 3. Total Procurement
     total = eoq + ss
     print(f"🚀 TOTAL TARGET INVENTORY: {total} units")
+
 
 if __name__ == "__main__":
     run_simulation()
