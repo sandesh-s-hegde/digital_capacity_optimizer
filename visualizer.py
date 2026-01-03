@@ -5,30 +5,27 @@ Generates supply chain performance charts for management reporting.
 import matplotlib.pyplot as plt
 import pandas as pd
 
-
-def plot_demand_curve(df: pd.DataFrame):
+def plot_scenario_comparison(df_baseline: pd.DataFrame, df_scenario: pd.DataFrame, scenario_name: str):
     """
-    Saves a trendline chart of server demand over time.
-
-    Args:
-        df (pd.DataFrame): The usage data containing 'month' and 'demand' columns.
+    Saves a comparison chart of Baseline vs. Scenario Demand.
     """
-    # Create the figure size (10 inches wide, 6 inches tall)
     plt.figure(figsize=(10, 6))
 
-    # Plot the data: X-axis = Month, Y-axis = Demand
-    plt.plot(df['month'], df['demand'], marker='o', linestyle='-', color='#0078D4', linewidth=2)
+    # Plot Baseline (Blue)
+    plt.plot(df_baseline['month'], df_baseline['demand'],
+             marker='o', linestyle='-', color='#0078D4', label='Baseline (Historical)')
 
-    # Styling (Microsoft Blue)
-    plt.title('Azure Capacity Demand Trend (2025)', fontsize=14)
+    # Plot Scenario (Red Dashed)
+    plt.plot(df_scenario['month'], df_scenario['demand'],
+             marker='x', linestyle='--', color='#D13438', label=f'Scenario: {scenario_name}')
+
+    plt.title(f'Capacity Planning: Baseline vs {scenario_name}', fontsize=14)
     plt.xlabel('Month', fontsize=12)
     plt.ylabel('Server Racks Needed', fontsize=12)
     plt.grid(True, linestyle='--', alpha=0.7)
+    plt.legend()
 
-    # Save to disk instead of popping up a window (better for automation)
-    output_file = 'demand_forecast.png'
+    output_file = 'scenario_comparison.png'
     plt.savefig(output_file)
-    print(f"📊 Chart successfully saved as '{output_file}'")
-
-    # Clear memory
+    print(f"📊 Comparison chart saved as '{output_file}'")
     plt.close()
