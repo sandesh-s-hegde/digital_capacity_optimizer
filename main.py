@@ -1,54 +1,62 @@
 """
 main.py
-Advanced Simulation entry point using CSV Data and Visualization.
+Digital Capacity Optimizer v3.0 - Scenario Analysis Edition
 """
 from inventory_math import calculate_eoq, calculate_safety_stock
 from data_loader import load_data
-from visualizer import plot_demand_curve
+from visualizer import plot_scenario_comparison
+from scenario_manager import create_stress_test
+import config
 
-# Global Parameters (Constants)
-ORDER_COST = 450.00  # $ Admin cost per PO
-HOLDING_COST = 18.50  # $ Cost to keep one drive powered/cooled for a year
-
-
-def run_simulation():
-    print("--- 🏭 Digital Capacity Optimizer v2.0 ---")
-
-    # 1. Load Real Data
-    print("Step 1: Loading Usage Logs...")
-    df = load_data('mock_data.csv')
-
-    # Stop if data is missing
-    if df.empty:
-        print("Stopping simulation due to missing data.")
-        return
-
-    # 2. Visualize Data
-    print("Step 2: Generating Dashboard...")
-    plot_demand_curve(df)
-
-    # 3. Analyze Statistics from Data
+def analyze_inventory(df, label):
+    """
+    Helper function to calculate metrics for a specific dataset.
+    """
     total_annual_demand = df['demand'].sum()
-
-    # Calculate simple stats for Safety Stock logic
-    # (Assuming 30 days per month for simplicity)
     max_daily_demand = df['demand'].max() / 30
     avg_daily_demand = df['demand'].mean() / 30
     avg_lead_time = df['lead_time_days'].mean()
 
-    print(f"📈 Analyzed {len(df)} months of log data.")
-    print(f"   -> Annual Demand: {total_annual_demand} units")
-    print(f"   -> Avg Lead Time: {round(avg_lead_time, 1)} days")
-
-    # 4. Calculate Optimization Metrics
-    eoq = calculate_eoq(total_annual_demand, ORDER_COST, HOLDING_COST)
+    eoq = calculate_eoq(total_annual_demand, config.ORDER_COST, config.HOLDING_COST)
     ss = calculate_safety_stock(max_daily_demand, avg_daily_demand, avg_lead_time)
 
-    print("-" * 40)
-    print(f"✅ Optimal Order Quantity (EOQ): {eoq} units")
-    print(f"🛡️ Safety Stock Buffer: {round(ss, 2)} units")
-    print("-" * 40)
+    return {
+        "label": label,
+        "eoq": eoq,
+        "safety_stock": round(ss, 2),
+        "total_reserve": round(eoq + ss, 2)
+    }
 
+def run_simulation():
+    print("--- 🏭 Digital Capacity Optimizer v3.0 (Scenario Mode) ---")
+
+    # 1. Load Baseline Data
+    df_baseline = load_data('mock_data.csv')
+    if df_baseline.empty: return
+
+    # 2. Create "High Growth" Scenario (20% Demand Increase)
+    df_growth = create_stress_test(df_baseline, demand_multiplier=1.20, lead_time_multiplier=1.0)
+
+    # 3. Visualize Comparison
+    plot_scenario_comparison(df_baseline, df_growth, "High Growth (+20%)")
+
+    # 4. Calculate & Compare Metrics
+    stats_base = analyze_inventory(df_baseline, "Baseline")
+    stats_growth = analyze_inventory(df_growth, "High Growth")
+
+    # 5. Print Executive Report
+    print(f"\n📊 SCENARIO COMPARISON REPORT")
+    print(f"{'Metric':<20} | {'Baseline':<15} | {'High Growth':<15} | {'Delta'}")
+    print("-" * 65)
+
+    for key in ['eoq', 'safety_stock', 'total_reserve']:
+        val_base = stats_base[key]
+        val_growth = stats_growth[key]
+        delta = round(val_growth - val_base, 2)
+        print(f"{key:<20} | {val_base:<15} | {val_growth:<15} | {delta:+}")
+
+    print("-" * 65)
+    print("✅ Analysis Complete. Check 'scenario_comparison.png' for visuals.")
 
 if __name__ == "__main__":
     run_simulation()
