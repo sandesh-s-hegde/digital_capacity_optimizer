@@ -1,8 +1,8 @@
 # Digital Capacity Optimizer
 
-**Author:** Sandesh Hegde  
-**Status:** Active Development (Jan 2026)  
-**License:** MIT  
+**Author:** Sandesh Hegde
+**Status:** Active Development (Jan 2026)
+**License:** MIT
 
 ---
 
@@ -12,43 +12,41 @@ This project explores the application of classical **Operations Management (OM)*
 
 While traditional OM focuses on physical stock (widgets), this tool treats **server capacity** as a stochastic inventory problem. It aims to minimize **Total Cost of Ownership (TCO)** by balancing:
 
-- **Holding Costs** (idle capacity)  
+- **Holding Costs** (idle capacity)
 - **Stockout Costs** (service outages)
 
 ---
 
 ## 🎯 Objectives
 
-- **EOQ Implementation**  
+- **EOQ Implementation**
   Adapting the Economic Order Quantity model for reserved instance procurement.
 
-- **Safety Stock Modeling**  
+- **Safety Stock Modeling**
   Calculating buffer capacity based on demand volatility (σ).
 
-- **Data Visualization**  
-  Automated generation of supply/demand curves from usage logs.
+- **Scenario Planning (New v3.0)**
+  Stress-testing supply chains against "High Growth" or "Supply Shock" events.
 
 ---
 
-## 📊 Results (Simulation Output)
+## 📊 Results (Scenario Analysis)
 
-The system currently analyzes **12 months of synthetic Azure usage data** to optimize procurement strategies.
+The system compares **Historical Baseline** vs. **High Growth (+20%)** scenarios to guide capacity planning.
 
-### 1. Demand Visualization
+### 1. Scenario Visualization
+![Scenario Comparison](scenario_comparison.png)
 
-![Demand Trend](demand_forecast.png)
-
-### 2. Optimization Report
-
-Running the simulation on the **Munich Data Center** dataset yields:
+### 2. Impact Analysis
+Simulating a 20% surge in cloud demand requires the following capacity adjustments:
 
 ```text
-✅ Optimal Order Quantity (EOQ): 848.53 units
-   -> Strategy: Buy servers in batches of ~850 to minimize holding costs.
-
-🛡️ Safety Stock Buffer: 299.07 units
-   -> Reason: Buffers against 15.8-day average lead time volatility.
-```
+📊 SCENARIO COMPARISON REPORT
+Metric               | Baseline        | High Growth     | Delta
+-----------------------------------------------------------------
+eoq                  | 848.53          | 929.52          | +80.99
+safety_stock         | 299.07          | 362.33          | +63.26
+total_reserve        | 1147.6          | 1291.85         | +144.25
 
 ---
 
@@ -56,7 +54,7 @@ Running the simulation on the **Munich Data Center** dataset yields:
 
 - **Language:** Python 3.11+
 - **Analysis:** Pandas (data ingestion), NumPy (mathematics)
-- **Visualization:** Matplotlib
+- **Visualization:** Matplotlib (Multi-series plotting)
 - **Version Control:** Git
 
 ---
@@ -72,3 +70,15 @@ Running the simulation on the **Munich Data Center** dataset yields:
    ```bash
    python main.py
    ```
+
+---
+
+## 🔮 Future Roadmap (Vision 2026-2030)
+This project is the foundational layer of a **Digital Twin** for Cloud Supply Chains. The development roadmap transitions from static analytics to autonomous decision-making.
+
+| Phase | Maturity Level | Key Capabilities | Tech Stack |
+| :--- | :--- | :--- | :--- |
+| **Phase 1 (Now)** | **Descriptive** | Static Rule-Based Logic (EOQ) | Python, Pandas |
+| **Phase 2** | **Predictive** | ML Forecasting (Seasonality) | Scikit-Learn, SQL |
+| **Phase 3** | **Cognitive** | "Chat with Data" (RAG) | Llama-3, Vector DBs |
+| **Phase 4** | **Autonomous** | Self-Healing Supply Chain | Reinforcement Learning |
