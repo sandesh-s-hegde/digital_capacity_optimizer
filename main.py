@@ -2,6 +2,7 @@
 main.py
 Digital Capacity Optimizer v3.0 - Scenario Analysis Edition
 """
+from azure_model import REGIONS
 from inventory_math import calculate_eoq, calculate_safety_stock
 from data_loader import load_data
 from visualizer import plot_scenario_comparison
@@ -28,7 +29,11 @@ def analyze_inventory(df, label):
     }
 
 def run_simulation():
-    print("--- 🏭 Digital Capacity Optimizer v3.0 (Scenario Mode) ---")
+    print("--- 🏭 Digital Capacity Optimizer v4.0 (Azure Edition) ---")
+    selected_region = "west-europe"
+    region_info = REGIONS[selected_region]
+    print(f"🌍 Target Region: {region_info['name']}")
+    print(f"🚛 Shipping SLA: {region_info['shipping_delay_days']} days")
 
     # 1. Load Baseline Data
     df_baseline = load_data('mock_data.csv')
