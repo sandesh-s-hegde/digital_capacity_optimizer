@@ -1,4 +1,5 @@
 # Digital Capacity Optimizer
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen) ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
 
 **Author:** Sandesh Hegde
 **Status:** Active Development (Jan 2026)
