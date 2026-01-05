@@ -1,67 +1,67 @@
 """
 main.py
-Digital Capacity Optimizer v3.0 - Scenario Analysis Edition
+Digital Capacity Optimizer v5.0 - Reliability Edition
 """
-from azure_model import REGIONS
-from inventory_math import calculate_eoq, calculate_safety_stock
+import pandas as pd
+from inventory_math import calculate_eoq, calculate_safety_stock, calculate_service_level
 from data_loader import load_data
 from visualizer import plot_scenario_comparison
 from scenario_manager import create_stress_test
 import config
 
-def analyze_inventory(df, label):
+def analyze_risk(df, label, shock_factor=0.0):
     """
-    Helper function to calculate metrics for a specific dataset.
+    Calculates Inventory Health and Service Level (SLA) under risk.
     """
+    # 1. Basic Stats
     total_annual_demand = df['demand'].sum()
-    max_daily_demand = df['demand'].max() / 30
-    avg_daily_demand = df['demand'].mean() / 30
-    avg_lead_time = df['lead_time_days'].mean()
+    avg_monthly_demand = df['demand'].mean()
+    std_dev_demand = df['demand'].std() # Volatility
 
+    # 2. Optimization
     eoq = calculate_eoq(total_annual_demand, config.ORDER_COST, config.HOLDING_COST)
-    ss = calculate_safety_stock(max_daily_demand, avg_daily_demand, avg_lead_time)
+    ss = calculate_safety_stock(df['demand'].max()/30, df['demand'].mean()/30, df['lead_time_days'].mean())
+
+    # 3. Apply Shock (e.g., Zone Failure destroys inventory)
+    total_inventory = (eoq + ss) * (1.0 - shock_factor)
+
+    # 4. Calculate SLA (Probability of survival)
+    sla = calculate_service_level(avg_monthly_demand, std_dev_demand, total_inventory)
 
     return {
         "label": label,
-        "eoq": eoq,
-        "safety_stock": round(ss, 2),
-        "total_reserve": round(eoq + ss, 2)
+        "inventory": round(total_inventory, 2),
+        "sla_percent": round(sla * 100, 2),
+        "status": "✅ Safe" if sla > 0.99 else "❌ RISK"
     }
 
 def run_simulation():
-    print("--- 🏭 Digital Capacity Optimizer v4.0 (Azure Edition) ---")
-    selected_region = "west-europe"
-    region_info = REGIONS[selected_region]
-    print(f"🌍 Target Region: {region_info['name']}")
-    print(f"🚛 Shipping SLA: {region_info['shipping_delay_days']} days")
+    print("--- 🏭 Digital Capacity Optimizer v5.0 (Reliability Mode) ---")
 
-    # 1. Load Baseline Data
     df_baseline = load_data('mock_data.csv')
     if df_baseline.empty: return
 
-    # 2. Create "High Growth" Scenario (20% Demand Increase)
-    df_growth = create_stress_test(df_baseline, demand_multiplier=1.20, lead_time_multiplier=1.0)
+    # Scenario 1: Normal Operations
+    stats_normal = analyze_risk(df_baseline, "Normal Ops", shock_factor=0.0)
 
-    # 3. Visualize Comparison
-    plot_scenario_comparison(df_baseline, df_growth, "High Growth (+20%)")
+    # Scenario 2: Zone Failure (10% Capacity Loss)
+    # Simulating a fire or power outage in one Availability Zone
+    stats_shock = analyze_risk(df_baseline, "Zone Outage", shock_factor=0.10)
 
-    # 4. Calculate & Compare Metrics
-    stats_base = analyze_inventory(df_baseline, "Baseline")
-    stats_growth = analyze_inventory(df_growth, "High Growth")
+    # Print Report
+    print(f"\n📊 RELIABILITY REPORT (Target SLA: 99.0%)")
+    print(f"{'Scenario':<15} | {'Inventory':<15} | {'SLA %':<10} | {'Status'}")
+    print("-" * 60)
 
-    # 5. Print Executive Report
-    print(f"\n📊 SCENARIO COMPARISON REPORT")
-    print(f"{'Metric':<20} | {'Baseline':<15} | {'High Growth':<15} | {'Delta'}")
-    print("-" * 65)
+    for stats in [stats_normal, stats_shock]:
+        print(f"{stats['label']:<15} | {stats['inventory']:<15} | {stats['sla_percent']:<10} | {stats['status']}")
 
-    for key in ['eoq', 'safety_stock', 'total_reserve']:
-        val_base = stats_base[key]
-        val_growth = stats_growth[key]
-        delta = round(val_growth - val_base, 2)
-        print(f"{key:<20} | {val_base:<15} | {val_growth:<15} | {delta:+}")
+    print("-" * 60)
 
-    print("-" * 65)
-    print("✅ Analysis Complete. Check 'scenario_comparison.png' for visuals.")
+    # Alert Logic
+    if stats_shock['sla_percent'] < 99.0:
+        print("⚠️ CRITICAL ALERT: Resilience falls below 99% during Zone Outage.")
+        print("   -> Recommendation: Increase Safety Stock by 15% to buffer risk.")
 
 if __name__ == "__main__":
     run_simulation()
