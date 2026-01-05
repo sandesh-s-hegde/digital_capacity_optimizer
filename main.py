@@ -58,10 +58,22 @@ def run_simulation():
 
     print("-" * 60)
 
-    # Alert Logic
+    # Smart Alert & Self-Healing Logic
     if stats_shock['sla_percent'] < 99.0:
-        print("⚠️ CRITICAL ALERT: Resilience falls below 99% during Zone Outage.")
-        print("   -> Recommendation: Increase Safety Stock by 15% to buffer risk.")
+        print("\n⚠️ SYSTEM FAILURE: Resilience is below 99%. Initiating Optimization...")
 
-if __name__ == "__main__":
-    run_simulation()
+        from inventory_math import optimize_safety_stock
+
+        # Calculate what we SHOULD have had
+        std_dev = df_baseline['demand'].std()
+        target_sla = 0.99
+
+        optimal_ss = optimize_safety_stock(target_sla, 0, std_dev)
+        current_ss = calculate_safety_stock(df_baseline['demand'].max() / 30, df_baseline['demand'].mean() / 30,
+                                            df_baseline['lead_time_days'].mean())
+
+        shortfall = optimal_ss - current_ss
+
+        print(f"   -> Required Safety Stock for 99% SLA: {optimal_ss} units")
+        print(f"   -> Current Safety Stock: {round(current_ss, 2)} units")
+        print(f"   -> ACTION: Purchase {round(shortfall, 2)} additional units immediately.")
