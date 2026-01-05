@@ -43,3 +43,17 @@ def calculate_service_level(avg_demand, std_dev_demand, total_inventory): # <---
     # Convert Z-score to Percentage (0 to 1)
     probability = norm.cdf(z_score)
     return round(probability, 4)
+
+
+def optimize_safety_stock(target_sla, avg_lead_time_demand, std_dev_demand):
+    """
+    Reverse-engineers the required Safety Stock to achieve a target SLA (e.g., 99.9%).
+    Formula: Z_Score * Standard_Deviation
+    """
+    # 1. Get the Z-score for the target % (e.g., 99% -> 2.33 std devs)
+    z_score = norm.ppf(target_sla)
+
+    # 2. Calculate required buffer
+    required_safety_stock = z_score * std_dev_demand
+
+    return round(required_safety_stock, 2)
