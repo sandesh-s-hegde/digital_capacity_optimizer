@@ -77,3 +77,6 @@ def run_simulation():
         print(f"   -> Required Safety Stock for 99% SLA: {optimal_ss} units")
         print(f"   -> Current Safety Stock: {round(current_ss, 2)} units")
         print(f"   -> ACTION: Purchase {round(shortfall, 2)} additional units immediately.")
+
+if __name__ == "__main__":
+    run_simulation()
