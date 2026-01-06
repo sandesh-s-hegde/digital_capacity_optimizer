@@ -1,62 +1,62 @@
 # Digital Capacity Optimizer
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen) ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
 
 **Author:** Sandesh Hegde
 **Status:** Active Development (Jan 2026)
 **License:** MIT
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen) ![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)
 
 ---
 
 ## 📌 Overview
 
-This project explores the application of classical **Operations Management (OM)** principles—specifically **Inventory Control Theory**—to modern Cloud Infrastructure (IaaS).
+This project explores the application of **Operations Research** and **Predictive Analytics** to Cloud Infrastructure (IaaS).
 
-While traditional OM focuses on physical stock (widgets), this tool treats **server capacity** as a stochastic inventory problem. It aims to minimize **Total Cost of Ownership (TCO)** by balancing:
-
-- **Holding Costs** (idle capacity)
-- **Stockout Costs** (service outages)
+It moves beyond simple averages by using **Holt-Winters Exponential Smoothing** to forecast future demand trends. It minimizes Total Cost of Ownership (TCO) by balancing:
+- **Holding Costs** (Idle Capacity)
+- **Stockout Costs** (Service Credits/Reputation Damage)
 
 ---
 
 ## 🎯 Objectives
 
-- **EOQ Implementation**
-  Adapting the Economic Order Quantity model for reserved instance procurement.
+- **Predictive Forecasting (AI)**
+  Using `statsmodels` to predict future capacity needs based on historical growth trends.
 
-- **Safety Stock Modeling**
-  Calculating buffer capacity based on demand volatility (σ).
+- **Newsvendor Logic (Stochastic)**
+  Calculating the mathematically optimal Service Level (e.g., 99.1%) based on the cost of downtime ($2,000/unit) vs. storage ($18.50/unit).
 
-- **Scenario Planning (New v3.0)**
-  Stress-testing supply chains against "High Growth" or "Supply Shock" events.
+- **Automated Visualization**
+  Generating trend lines and confidence intervals for executive reporting.
 
 ---
 
-## 📊 Results (Scenario Analysis)
+## 📊 Results (Predictive Mode)
 
-The system compares **Historical Baseline** vs. **High Growth (+20%)** scenarios to guide capacity planning.
+The system detects a strong growth trend in the dataset and proactively adjusts procurement.
 
-### 1. Scenario Visualization
-![Scenario Comparison](scenario_comparison.png)
+### 1. Demand Forecast (Next Quarter)
+![Forecast Trend](forecast_chart.png)
 
-### 2. Impact Analysis
-Simulating a 20% surge in cloud demand requires the following capacity adjustments:
+### 2. Proactive Analysis
+Unlike reactive models that rely on past averages, the **Oracle Engine** projects forward:
 
 ```text
-📊 SCENARIO COMPARISON REPORT
-Metric               | Baseline        | High Growth     | Delta
------------------------------------------------------------------
-eoq                  | 848.53          | 929.52          | +80.99
-safety_stock         | 299.07          | 362.33          | +63.26
-total_reserve        | 1147.6          | 1291.85         | +144.25
+📊 PROACTIVE ANALYSIS
+   -> Historical Avg Demand: 1233.3 units
+   -> Predicted Next Month:  1950.9 units (Growth Trend)
+
+🔮 RECOMMENDATION (Month 13):
+   Buy 2561.32 units.
+   (Buffers against volatility to hit a 99.1% Service Level Target)
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Language:** Python 3.11+
-- **Analysis:** Pandas (data ingestion), NumPy (mathematics)
-- **Visualization:** Matplotlib (Multi-series plotting)
-- **Version Control:** Git
+- **Forecasting:** Statsmodels (hot-Winters)
+- **Analysis:** Pandas, NumPy
+- **Visualization:** Matplotlib
 
 ---
 
