@@ -29,3 +29,32 @@ def plot_scenario_comparison(df_baseline: pd.DataFrame, df_scenario: pd.DataFram
     plt.savefig(output_file)
     print(f"📊 Comparison chart saved as '{output_file}'")
     plt.close()
+
+def plot_forecast(df_history: pd.DataFrame, forecast_values: pd.Series):
+    """
+    Plots historical data vs. predicted future demand.
+    """
+    plt.figure(figsize=(12, 6))
+
+    # 1. Plot History (Solid Blue Line)
+    plt.plot(df_history.index, df_history['demand'],
+             marker='o', linestyle='-', color='#0078D4', label='Historical Data')
+
+    # 2. Plot Forecast (Dashed Green Line)
+    # Create an index for the future (12, 13, 14...)
+    last_index = df_history.index[-1]
+    future_indices = range(last_index + 1, last_index + 1 + len(forecast_values))
+
+    plt.plot(future_indices, forecast_values,
+             marker='x', linestyle='--', color='#107C10', label='Forecast (AI Prediction)')
+
+    plt.title('Demand Forecast: Next Quarter Prediction', fontsize=14)
+    plt.xlabel('Time Period (Month Index)', fontsize=12)
+    plt.ylabel('Demand', fontsize=12)
+    plt.grid(True, linestyle=':', alpha=0.6)
+    plt.legend()
+
+    output_file = 'forecast_chart.png'
+    plt.savefig(output_file)
+    print(f"🔮 Forecast chart saved as '{output_file}'")
+    plt.close()
