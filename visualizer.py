@@ -1,6 +1,7 @@
 """
 visualizer.py
 Generates supply chain performance charts for management reporting.
+Updated for Streamlit Web Rendering.
 """
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,6 +9,7 @@ import pandas as pd
 def plot_scenario_comparison(df_baseline: pd.DataFrame, df_scenario: pd.DataFrame, scenario_name: str):
     """
     Saves a comparison chart of Baseline vs. Scenario Demand.
+    (Kept as-is for backward compatibility with main.py)
     """
     plt.figure(figsize=(10, 6))
 
@@ -33,28 +35,29 @@ def plot_scenario_comparison(df_baseline: pd.DataFrame, df_scenario: pd.DataFram
 def plot_forecast(df_history: pd.DataFrame, forecast_values: pd.Series):
     """
     Plots historical data vs. predicted future demand.
+    RETURNS the figure object for Streamlit rendering.
     """
-    plt.figure(figsize=(12, 6))
+    # CHANGE 1: Create figure and axes explicitly using subplots
+    fig, ax = plt.subplots(figsize=(12, 6))
 
     # 1. Plot History (Solid Blue Line)
-    plt.plot(df_history.index, df_history['demand'],
+    # CHANGE 2: Use 'ax.plot' instead of 'plt.plot'
+    ax.plot(df_history.index, df_history['demand'],
              marker='o', linestyle='-', color='#0078D4', label='Historical Data')
 
     # 2. Plot Forecast (Dashed Green Line)
-    # Create an index for the future (12, 13, 14...)
     last_index = df_history.index[-1]
     future_indices = range(last_index + 1, last_index + 1 + len(forecast_values))
 
-    plt.plot(future_indices, forecast_values,
+    ax.plot(future_indices, forecast_values,
              marker='x', linestyle='--', color='#107C10', label='Forecast (AI Prediction)')
 
-    plt.title('Demand Forecast: Next Quarter Prediction', fontsize=14)
-    plt.xlabel('Time Period (Month Index)', fontsize=12)
-    plt.ylabel('Demand', fontsize=12)
-    plt.grid(True, linestyle=':', alpha=0.6)
-    plt.legend()
+    # CHANGE 3: Use 'ax.set_title' instead of 'plt.title'
+    ax.set_title('Demand Forecast: Next Quarter Prediction', fontsize=14)
+    ax.set_xlabel('Time Period (Month Index)', fontsize=12)
+    ax.set_ylabel('Demand', fontsize=12)
+    ax.grid(True, linestyle=':', alpha=0.6)
+    ax.legend()
 
-    output_file = 'forecast_chart.png'
-    plt.savefig(output_file)
-    print(f"🔮 Forecast chart saved as '{output_file}'")
-    plt.close()
+    # CHANGE 4: Return 'fig' instead of saving/closing
+    return fig
