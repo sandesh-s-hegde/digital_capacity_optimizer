@@ -1,0 +1,21 @@
+# Ignore Git history
+.git/
+.gitignore
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore Virtual Environments (Heavy!)
+venv/
+env/
+.env
+
+# Ignore IDE settings
+.idea/
+.vscode/
+
+# Ignore Documentation assets
+*.jpg
+*.png
+README.md
