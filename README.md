@@ -5,6 +5,10 @@
 **License:** MIT  
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen) ![Docker](https://img.shields.io/badge/docker-supported-blue)
 
+## 🚀 Live Demo
+**[Click here to launch the App](https://digital-capacity-optimizer.onrender.com/)**
+*(Note: Free tier servers may take 30s to wake up XD)*
+
 ---
 
 ## 📌 Overview
