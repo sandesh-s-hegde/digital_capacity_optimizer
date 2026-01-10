@@ -1,15 +1,15 @@
 """
 config.py
 Centralized configuration for simulation parameters.
+Reads from Environment Variables for Cloud/Docker overrides.
 """
+import os
 
 # Financial Parameters (USD)
-ORDER_COST = 450.00         # Cost to place one Purchase Order
-HOLDING_COST = 18.50        # Annual cost to store/power one unit
-
-# NEW: Cost of being out of stock (Service Credits / Reputation Damage)
-# This is usually much higher than holding cost.
-STOCKOUT_COST = 2000.00
+# We use os.getenv to allow server-side overrides without changing code
+ORDER_COST = float(os.getenv("ORDER_COST", 450.00))
+HOLDING_COST = float(os.getenv("HOLDING_COST", 18.50))
+STOCKOUT_COST = float(os.getenv("STOCKOUT_COST", 2000.00))
 
 # Simulation Defaults
-DEFAULT_LEAD_TIME = 14      # Days
+DEFAULT_LEAD_TIME = int(os.getenv("DEFAULT_LEAD_TIME", 14))
