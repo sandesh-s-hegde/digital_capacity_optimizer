@@ -1,4 +1,3 @@
-```markdown
 # 📦 Digital Capacity Optimizer
 
 **Author:** Sandesh Hegde  
