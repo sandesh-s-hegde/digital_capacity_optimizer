@@ -1,72 +1,101 @@
-"""
-app.py
-The Web Interface for the Digital Capacity Optimizer.
-Run with: streamlit run app.py
-"""
 import streamlit as st
 import pandas as pd
-from inventory_math import calculate_newsvendor_target, calculate_required_inventory
-from forecaster import generate_forecast
-from visualizer import plot_forecast
+import plotly.graph_objects as go
+from sqlalchemy import create_engine
+from database_schema import DATABASE_URL
+
+# Import our custom logic modules
 import config
+import inventory_math
 
-# --- 1. Page Configuration ---
-st.set_page_config(page_title="Digital Capacity Optimizer", page_icon="🏭")
+# --- CONFIGURATION ---
+st.set_page_config(page_title="Digital Capacity Optimizer", layout="wide")
 
-st.title("🏭 Digital Capacity Optimizer")
-st.markdown("""
-**AI-Powered Supply Chain Planning** Upload your demand logs to generate forecasts and optimized procurement plans.
+# --- DATABASE CONNECTION ---
+@st.cache_data # Caches the data to make the app faster
+def load_data_from_db():
+    """
+    Connects to SQLite and loads the demand logs.
+    """
+    try:
+        engine = create_engine(DATABASE_URL)
+        # Read the table into a Pandas DataFrame
+        query = "SELECT * FROM demand_logs ORDER BY date ASC"
+        df = pd.read_sql(query, engine)
+
+        if df.empty:
+            return None
+
+        # Ensure 'date' is actually a datetime object
+        df['date'] = pd.to_datetime(df['date'])
+        return df
+    except Exception as e:
+        st.error(f"Database Error: {e}")
+        return None
+
+# --- SIDEBAR ---
+st.sidebar.header("⚙️ Simulation Parameters")
+holding_cost = st.sidebar.number_input("Holding Cost ($/unit)", value=config.HOLDING_COST)
+stockout_cost = st.sidebar.number_input("Stockout Penalty ($/unit)", value=config.STOCKOUT_COST)
+lead_time = st.sidebar.number_input("Lead Time (Days)", value=config.DEFAULT_LEAD_TIME)
+
+# --- MAIN PAGE ---
+st.title("📦 Digital Capacity Optimizer")
+st.markdown(f"""
+**System Status:** Connected to `inventory_system.db` 🟢
+\nThis dashboard automatically loads historical demand from the central SQL database.
 """)
 
-# --- 2. Sidebar (Settings) ---
-st.sidebar.header("⚙️ Configuration")
-holding_cost = st.sidebar.number_input("Holding Cost ($/Unit/Year)", value=config.HOLDING_COST)
-stockout_cost = st.sidebar.number_input("Stockout Cost ($/Unit)", value=config.STOCKOUT_COST)
+# --- LOAD DATA AUTOMATICALLY ---
+df = load_data_from_db()
 
-# --- 3. File Upload ---
-uploaded_file = st.file_uploader("Upload CSV Usage Logs", type=["csv"])
+if df is not None:
+    # 1. VISUALIZE TRENDS
+    st.subheader("📈 Demand Trends (Historical)")
 
-if uploaded_file is not None:
-    # Load Data
-    df = pd.read_csv(uploaded_file)
-    st.success(f"✅ Loaded {len(df)} months of data.")
+    # Create the chart
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df['date'],
+        y=df['demand'],
+        mode='lines+markers',
+        name='Actual Demand',
+        line=dict(color='blue')
+    ))
+    st.plotly_chart(fig, use_container_width=True)
 
-    # Show Raw Data (Expandable)
-    with st.expander("View Raw Data"):
-        st.dataframe(df)
+    # 2. RUN CALCULATIONS
+    # Get latest data points for simulation
+    latest_demand = df['demand'].iloc[-1]
+    avg_demand = df['demand'].mean()
+    std_dev = df['demand'].std()
 
-    # --- 4. Run Forecasting Engine ---
-    st.subheader("🔮 Demand Forecast")
+    # Financial Math
+    eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
+    target_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
+    safety_stock = inventory_math.calculate_required_inventory(0, std_dev, target_sla) # Base safety stock
 
-    months_to_predict = st.slider("Months to Forecast", min_value=1, max_value=6, value=3)
+    # 3. DISPLAY METRICS
+    st.markdown("---")
+    st.subheader("🔮 Optimization Engine")
 
-    with st.spinner("Training AI Model..."):
-        forecast_result = generate_forecast(df, months_ahead=months_to_predict)
-        forecast_values = forecast_result['forecast_values']
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Avg Monthly Demand", f"{int(avg_demand)} units")
+    with col2:
+        st.metric("Rec. Order Size (EOQ)", f"{int(eoq)} units")
+    with col3:
+        st.metric("Optimal Service Level", f"{target_sla*100:.1f}%")
+    with col4:
+        st.metric("Safety Stock Buffer", f"{int(safety_stock)} units")
 
-        # Display Chart
-        fig = plot_forecast(df, forecast_values)
-        st.pyplot(fig)
+    # 4. RECOMMENDATION LOGIC
+    total_needed = avg_demand + safety_stock
 
-    # --- 5. Optimization Results ---
-    st.subheader("📦 Procurement Recommendation")
-
-    # Get Next Month's Prediction
-    next_month_demand = forecast_values.iloc[0]
-    std_dev_demand = df['demand'].std()
-
-    # Calculate Math
-    optimal_sla = calculate_newsvendor_target(holding_cost, stockout_cost)
-    required_inventory = calculate_required_inventory(next_month_demand, std_dev_demand, optimal_sla)
-
-    # Display Key Metrics in Columns
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Predicted Demand", f"{int(next_month_demand)} units", delta="Next Month")
-    col2.metric("Optimal Service Level", f"{optimal_sla * 100:.1f}%", help="Based on Cost Ratio")
-    col3.metric("Recommended Order", f"{int(required_inventory)} units", delta="Final Decision")
-
-    st.info(
-        f"💡 **Insight:** To maintain a {optimal_sla * 100:.1f}% Service Level with current volatility, you need **{int(required_inventory)} units** in stock.")
+    st.success(f"""
+    **🤖 AI Recommendation:** To maintain a **{target_sla*100:.1f}% Service Level**, you should keep **{int(total_needed)} units** in stock.
+    \nThis accounts for demand volatility ({int(std_dev)} variance) and the high cost of stockouts (${stockout_cost}).
+    """)
 
 else:
-    st.info("👆 Please upload a CSV file to begin simulation. (Use 'mock_data.csv')")
+    st.warning("⚠️ The database is empty. Please run the migration script or contact IT.")
