@@ -122,5 +122,3 @@ This project is the foundational layer of a Digital Twin for Cloud Supply Chains
 | Phase 2 (Done) | Predictive | Dockerized Web App + SQL Database | PostgreSQL, Docker |
 | Phase 3 (Next) | Cognitive | "Chat with Data" (RAG) | Gemini API, Vector DBs |
 | Phase 4 | Autonomous | Self-Healing Supply Chain | Reinforcement Learning |
-
-```
