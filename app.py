@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from sqlalchemy import create_engine
-from database_schema import DATABASE_URL
-from datetime import datetime, timedelta
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session
+from database_schema import DATABASE_URL, DemandLog, engine
+from datetime import datetime, date
 
 # Import our custom logic modules
 import config
@@ -13,12 +14,11 @@ import inventory_math
 st.set_page_config(page_title="Digital Capacity Optimizer", layout="wide")
 
 
-# --- DATA LOADERS ---
-@st.cache_data
+# --- DATABASE FUNCTIONS ---
 def load_data_from_db():
     """Connects to the SQL Database."""
     try:
-        engine = create_engine(DATABASE_URL)
+        # Use pandas to run a SELECT query
         query = "SELECT * FROM demand_logs ORDER BY date ASC"
         df = pd.read_sql(query, engine)
         if not df.empty:
@@ -29,130 +29,110 @@ def load_data_from_db():
         return None
 
 
+def add_new_order(log_date, demand_qty):
+    """Writes a new record to the PostgreSQL database safely."""
+    try:
+        with Session(engine) as session:
+            # Create the Python Object
+            new_log = DemandLog(
+                date=log_date,
+                demand=demand_qty,
+                region="Global",  # Default for now
+                unit_price=config.HOLDING_COST  # Placeholder or user input
+            )
+            # Add and Commit (Save)
+            session.add(new_log)
+            session.commit()
+            return True
+    except Exception as e:
+        st.error(f"Failed to write to DB: {e}")
+        return False
+
+
+# --- CSV LOADER (Sandbox) ---
 def load_data_from_csv(uploaded_file):
-    """Parses an uploaded CSV file for simulation."""
     try:
         df = pd.read_csv(uploaded_file)
-
-        # 1. Clean Column Names
         df.columns = df.columns.str.strip().str.lower()
-
-        # 2. Map Columns
         if 'date' in df.columns:
-            date_col = 'date'
-        elif 'month' in df.columns:
-            date_col = 'month'
-        else:
-            st.error("CSV must have a 'Date' or 'Month' column.")
-            return None
-
-        # 3. Standardize Dates (Handle "Jan", "Feb" or "2024-01-01")
-        # We'll generate fake dates for simulation if simple month names are used
-        clean_dates = []
-        base_year = datetime.now().year
-        month_map = {
-            "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
-            "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12
-        }
-
-        for _, row in df.iterrows():
-            raw = str(row[date_col]).strip()
-            # Try parsing real date
-            try:
-                dt = pd.to_datetime(raw).date()
-            except:
-                # Try parsing "Jan", "Feb"
-                month_str = raw[:3].lower()
-                month_num = month_map.get(month_str, 1)
-                dt = datetime(base_year, month_num, 1).date()
-            clean_dates.append(dt)
-
-        df['date'] = clean_dates
-        df['date'] = pd.to_datetime(df['date'])  # Ensure consistent type
+            df['date'] = pd.to_datetime(df['date'])
         return df
-
     except Exception as e:
         st.error(f"Error reading CSV: {e}")
         return None
 
 
-# --- SIDEBAR UI ---
+# --- SIDEBAR: CONTROLS ---
 st.sidebar.header("⚙️ Data Source")
-source_option = st.sidebar.radio(
-    "Select Input Mode:",
-    ("🔌 Live Database", "📂 Upload CSV (Sandbox)")
-)
+source_option = st.sidebar.radio("Mode:", ("🔌 Live Database", "📂 Sandbox (CSV)"))
+
+st.sidebar.markdown("---")
+
+# *** NEW: THE INPUT FORM ***
+# Only show this form if we are connected to the Real Database
+if source_option == "🔌 Live Database":
+    st.sidebar.subheader("📝 Log New Inventory")
+    with st.sidebar.form("entry_form"):
+        new_date = st.date_input("Date", value=date.today())
+        new_demand = st.number_input("Demand / Order Qty", min_value=1, value=100)
+
+        submitted = st.form_submit_button("💾 Save to Database")
+
+        if submitted:
+            success = add_new_order(new_date, new_demand)
+            if success:
+                st.sidebar.success("✅ Saved! Refreshing...")
+                # We simply rerun the app to fetch the new data instantly
+                st.rerun()
 
 st.sidebar.markdown("---")
 st.sidebar.header("🔧 Simulation Parameters")
-holding_cost = st.sidebar.number_input("Holding Cost ($/unit)", value=config.HOLDING_COST)
-stockout_cost = st.sidebar.number_input("Stockout Penalty ($/unit)", value=config.STOCKOUT_COST)
-lead_time = st.sidebar.number_input("Lead Time (Days)", value=config.DEFAULT_LEAD_TIME)
+holding_cost = st.sidebar.number_input("Holding Cost ($)", value=config.HOLDING_COST)
+stockout_cost = st.sidebar.number_input("Stockout Cost ($)", value=config.STOCKOUT_COST)
 
-# --- MAIN LOGIC ---
+# --- MAIN PAGE ---
 st.title("📦 Digital Capacity Optimizer")
 
-# 1. Load Data based on Selection
+# 1. LOAD DATA
 df = None
-
 if source_option == "🔌 Live Database":
     df = load_data_from_db()
     if df is not None:
-        st.success(f"Connected to Production Database. Loaded {len(df)} records.")
-    else:
-        st.warning("Database is empty. Try running the migration script.")
-
-else:  # Upload CSV Mode
-    st.info("Sandbox Mode: Upload a CSV to simulate different demand scenarios.")
-    uploaded_file = st.file_uploader("Upload 'mock_data.csv'", type=["csv"])
-    if uploaded_file is not None:
+        st.caption(f"Connected to Production Database | {len(df)} Records Loaded")
+else:
+    uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
+    if uploaded_file:
         df = load_data_from_csv(uploaded_file)
-        if df is not None:
-            st.success("Simulation Data Loaded Successfully.")
 
-# 2. Visualize & Calculate (Only if data exists)
+# 2. VISUALIZE & ANALYZE
 if df is not None and not df.empty:
 
-    # VISUALIZE
-    st.subheader("📈 Demand Trends")
+    # Chart
+    st.subheader("📈 Inventory & Demand Trends")
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=df['date'],
-        y=df['demand'],
-        mode='lines+markers',
-        name='Demand',
+        x=df['date'], y=df['demand'],
+        mode='lines+markers', name='Demand History',
         line=dict(color='#2ca02c', width=3)
     ))
     st.plotly_chart(fig, use_container_width=True)
 
-    # CALCULATE
-    latest_demand = df['demand'].iloc[-1]
+    # Math
     avg_demand = df['demand'].mean()
     std_dev = df['demand'].std()
-
-    eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
     target_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
     safety_stock = inventory_math.calculate_required_inventory(0, std_dev, target_sla)
 
-    total_needed = avg_demand + safety_stock
+    # Metrics
+    st.markdown("### 🔮 Planning Engine")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Avg Monthly Demand", f"{int(avg_demand)}")
+    c2.metric("Target Service Level", f"{target_sla * 100:.1f}%")
+    c3.metric("Rec. Safety Stock", f"{int(safety_stock)}")
 
-    # DISPLAY METRICS
-    st.markdown("---")
-    st.subheader("🔮 Optimization Engine")
+    st.info(
+        f"**AI Insight:** Based on a volatility of {int(std_dev)} units, you need **{int(safety_stock)} units** buffer stock.")
 
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Avg Monthly Demand", f"{int(avg_demand)} units")
-    with col2:
-        st.metric("Rec. Order Size (EOQ)", f"{int(eoq)} units")
-    with col3:
-        st.metric("Optimal Service Level", f"{target_sla * 100:.1f}%")
-    with col4:
-        st.metric("Safety Stock Buffer", f"{int(safety_stock)} units")
-
-    st.info(f"""
-    **🤖 Recommendation:** To maintain a **{target_sla * 100:.1f}% Service Level**, keep **{int(total_needed)} units** in stock.
-    """)
-
-elif source_option == "📂 Upload CSV (Sandbox)" and df is None:
-    st.write("👈 *Waiting for file upload...*")
+else:
+    if source_option == "🔌 Live Database":
+        st.warning("Database is empty. Use the sidebar form to add data!")
