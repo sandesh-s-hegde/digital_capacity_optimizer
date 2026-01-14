@@ -33,14 +33,12 @@ def add_new_order(log_date, demand_qty):
     """Writes a new record to the PostgreSQL database safely."""
     try:
         with Session(engine) as session:
-            # Create the Python Object
             new_log = DemandLog(
                 date=log_date,
                 demand=demand_qty,
-                region="Global",  # Default for now
-                unit_price=config.HOLDING_COST  # Placeholder or user input
+                region="Global",
+                unit_price=config.HOLDING_COST
             )
-            # Add and Commit (Save)
             session.add(new_log)
             session.commit()
             return True
@@ -68,13 +66,23 @@ source_option = st.sidebar.radio("Mode:", ("🔌 Live Database", "📂 Sandbox (
 
 st.sidebar.markdown("---")
 
-# *** NEW: THE INPUT FORM ***
-# Only show this form if we are connected to the Real Database
+# *** NEW: THE INPUT FORM (POLISHED) ***
 if source_option == "🔌 Live Database":
     st.sidebar.subheader("📝 Log New Inventory")
+
     with st.sidebar.form("entry_form"):
-        new_date = st.date_input("Date", value=date.today())
-        new_demand = st.number_input("Demand / Order Qty", min_value=1, value=100)
+        # Improved UI: Clear label, today's date default
+        new_date = st.date_input("Transaction Date", value=date.today())
+
+        # Improved UI: Integer only, no decimals, helpful tooltip
+        new_demand = st.number_input(
+            "📦 Order Quantity (Units)",
+            min_value=1,
+            value=100,
+            step=1,
+            format="%d",
+            help="Enter the total number of units received into inventory."
+        )
 
         submitted = st.form_submit_button("💾 Save to Database")
 
@@ -82,7 +90,6 @@ if source_option == "🔌 Live Database":
             success = add_new_order(new_date, new_demand)
             if success:
                 st.sidebar.success("✅ Saved! Refreshing...")
-                # We simply rerun the app to fetch the new data instantly
                 st.rerun()
 
 st.sidebar.markdown("---")
