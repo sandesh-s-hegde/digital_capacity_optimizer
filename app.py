@@ -1,14 +1,14 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
-from database_schema import DATABASE_URL, DemandLog, engine
-from datetime import datetime, date
+from database_schema import engine, DemandLog
+from datetime import date
 
-# Import our custom logic modules
+# Import Custom Logic Modules
 import config
 import inventory_math
+import ai_brain  # <--- The new AI module
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Digital Capacity Optimizer", layout="wide")
@@ -16,9 +16,8 @@ st.set_page_config(page_title="Digital Capacity Optimizer", layout="wide")
 
 # --- DATABASE FUNCTIONS ---
 def load_data_from_db():
-    """Connects to the SQL Database."""
+    """Connects to the SQL Database and fetches all records."""
     try:
-        # Use pandas to run a SELECT query
         query = "SELECT * FROM demand_logs ORDER BY date ASC"
         df = pd.read_sql(query, engine)
         if not df.empty:
@@ -47,7 +46,7 @@ def add_new_order(log_date, demand_qty):
         return False
 
 
-# --- CSV LOADER (Sandbox) ---
+# --- CSV LOADER (Sandbox Mode) ---
 def load_data_from_csv(uploaded_file):
     try:
         df = pd.read_csv(uploaded_file)
@@ -66,30 +65,26 @@ source_option = st.sidebar.radio("Mode:", ("🔌 Live Database", "📂 Sandbox (
 
 st.sidebar.markdown("---")
 
-# *** NEW: THE INPUT FORM (POLISHED) ***
+# Input Form (Only visible in Live Mode)
 if source_option == "🔌 Live Database":
     st.sidebar.subheader("📝 Log New Inventory")
 
     with st.sidebar.form("entry_form"):
-        # Improved UI: Clear label, today's date default
         new_date = st.date_input("Transaction Date", value=date.today())
-
-        # Improved UI: Integer only, no decimals, helpful tooltip
         new_demand = st.number_input(
             "📦 Order Quantity (Units)",
             min_value=1,
             value=100,
             step=1,
             format="%d",
-            help="Enter the total number of units received into inventory."
+            help="Enter the total units received/demanded."
         )
 
         submitted = st.form_submit_button("💾 Save to Database")
 
         if submitted:
-            success = add_new_order(new_date, new_demand)
-            if success:
-                st.sidebar.success("✅ Saved! Refreshing...")
+            if add_new_order(new_date, new_demand):
+                st.sidebar.success("✅ Saved!")
                 st.rerun()
 
 st.sidebar.markdown("---")
@@ -107,6 +102,8 @@ if source_option == "🔌 Live Database":
     if df is not None:
         st.caption(f"Connected to Production Database | {len(df)} Records Loaded")
 else:
+    # Sandbox Mode
+    st.info("Sandbox Mode: Upload a CSV to simulate different demand scenarios.")
     uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
     if uploaded_file:
         df = load_data_from_csv(uploaded_file)
@@ -114,7 +111,7 @@ else:
 # 2. VISUALIZE & ANALYZE
 if df is not None and not df.empty:
 
-    # Chart
+    # A. Demand Chart
     st.subheader("📈 Inventory & Demand Trends")
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -124,21 +121,44 @@ if df is not None and not df.empty:
     ))
     st.plotly_chart(fig, use_container_width=True)
 
-    # Math
+    # B. Math Calculations
     avg_demand = df['demand'].mean()
     std_dev = df['demand'].std()
+
+    eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
     target_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
     safety_stock = inventory_math.calculate_required_inventory(0, std_dev, target_sla)
 
-    # Metrics
+    # C. Display Key Metrics
     st.markdown("### 🔮 Planning Engine")
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("Avg Monthly Demand", f"{int(avg_demand)}")
     c2.metric("Target Service Level", f"{target_sla * 100:.1f}%")
-    c3.metric("Rec. Safety Stock", f"{int(safety_stock)}")
+    c3.metric("Safety Stock", f"{int(safety_stock)}")
+    c4.metric("Optimal Order (EOQ)", f"{int(eoq)}")
 
-    st.info(
-        f"**AI Insight:** Based on a volatility of {int(std_dev)} units, you need **{int(safety_stock)} units** buffer stock.")
+    st.markdown("---")
+
+    # --- 3. THE AI BRAIN INTEGRATION ---
+    st.subheader("🧠 AI Supply Chain Analyst")
+
+    # Prepare data for the AI
+    metrics_context = {
+        "avg_demand": int(avg_demand),
+        "std_dev": int(std_dev),
+        "eoq": int(eoq),
+        "safety_stock": int(safety_stock),
+        "sla": target_sla
+    }
+
+    if st.button("✨ Generate AI Report"):
+        with st.spinner("Analyzing market trends and inventory risks..."):
+            # Call the AI module
+            analysis = ai_brain.analyze_supply_chain(df, metrics_context)
+
+            # Display result
+            st.success("Analysis Complete")
+            st.markdown(analysis)
 
 else:
     if source_option == "🔌 Live Database":
