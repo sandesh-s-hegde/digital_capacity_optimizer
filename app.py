@@ -139,27 +139,55 @@ if df is not None and not df.empty:
 
     st.markdown("---")
 
-    # --- 3. THE AI BRAIN INTEGRATION ---
-    st.subheader("🧠 AI Supply Chain Analyst")
+    # --- 3. THE CONVERSATIONAL AI ---
+    st.subheader("💬 Chat with your Supply Chain Data")
 
-    # Prepare data for the AI
-    metrics_context = {
-        "avg_demand": int(avg_demand),
-        "std_dev": int(std_dev),
-        "eoq": int(eoq),
-        "safety_stock": int(safety_stock),
-        "sla": target_sla
-    }
+    # A. Initialize Chat History in Session State
+    # This keeps the messages on screen when the app "blinks" (reruns)
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-    if st.button("✨ Generate AI Report"):
-        with st.spinner("Analyzing market trends and inventory risks..."):
-            # Call the AI module
-            analysis = ai_brain.analyze_supply_chain(df, metrics_context)
+    # B. Display Previous Messages
+    # We loop through the memory and draw the bubbles
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-            # Display result
-            st.success("Analysis Complete")
-            st.markdown(analysis)
+    # C. Handle New Input
+    # This box waits for the user to type and hit Enter
+    if prompt := st.chat_input("Ask about your inventory (e.g., 'Why is safety stock high?')"):
+
+        # 1. Display User Message immediately
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        # Save to memory
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+        # 2. Convert memory format for Gemini
+        # Gemini expects a list of objects, Streamlit uses a list of dicts. We convert lightly.
+        gemini_history = []
+        for msg in st.session_state.messages[:-1]:  # Skip the very last one (we send it separately)
+            role = "user" if msg["role"] == "user" else "model"
+            gemini_history.append({"role": role, "parts": [msg["content"]]})
+
+        # 3. Get AI Response
+        metrics_context = {
+            "avg_demand": int(avg_demand),
+            "std_dev": int(std_dev),
+            "eoq": int(eoq),
+            "safety_stock": int(safety_stock),
+            "sla": target_sla
+        }
+
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                response_text = ai_brain.chat_with_data(prompt, gemini_history, df, metrics_context)
+                st.markdown(response_text)
+
+        # 4. Save AI Response to memory
+        st.session_state.messages.append({"role": "assistant", "content": response_text})
 
 else:
+    # (Matches the 'if df is not None' block from earlier)
     if source_option == "🔌 Live Database":
         st.warning("Database is empty. Use the sidebar form to add data!")
