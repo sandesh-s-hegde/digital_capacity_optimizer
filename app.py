@@ -8,7 +8,7 @@ from datetime import date
 # Import Custom Logic Modules
 import config
 import inventory_math
-import ai_brain  # <--- The new AI module
+import ai_brain  # <--- The AI Brain
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Digital Capacity Optimizer", layout="wide")
@@ -92,6 +92,20 @@ st.sidebar.header("🔧 Simulation Parameters")
 holding_cost = st.sidebar.number_input("Holding Cost ($)", value=config.HOLDING_COST)
 stockout_cost = st.sidebar.number_input("Stockout Cost ($)", value=config.STOCKOUT_COST)
 
+# --- SIDEBAR: ABOUT SECTION ---
+st.sidebar.markdown("---")
+st.sidebar.markdown("### ℹ️ About")
+st.sidebar.info(
+    """
+    **Capacity Optimizer v2.1**
+
+    🤖 AI Model: Gemini 1.5 Flash
+    📊 Mode: Production
+
+    *Built by Sandesh Hegde*
+    """
+)
+
 # --- MAIN PAGE ---
 st.title("📦 Digital Capacity Optimizer")
 
@@ -140,37 +154,43 @@ if df is not None and not df.empty:
     st.markdown("---")
 
     # --- 3. THE CONVERSATIONAL AI ---
-    st.subheader("💬 Chat with your Supply Chain Data")
+
+    # Layout: Title left, Reset Button right
+    col_title, col_btn = st.columns([5, 1])
+
+    with col_title:
+        st.subheader("💬 Chat with your Supply Chain Data")
+
+    with col_btn:
+        # The Reset Button logic
+        if st.button("🗑️ Clear", help="Reset Chat History"):
+            st.session_state.messages = []
+            st.rerun()
 
     # A. Initialize Chat History in Session State
-    # This keeps the messages on screen when the app "blinks" (reruns)
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
     # B. Display Previous Messages
-    # We loop through the memory and draw the bubbles
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
     # C. Handle New Input
-    # This box waits for the user to type and hit Enter
     if prompt := st.chat_input("Ask about your inventory (e.g., 'Why is safety stock high?')"):
 
         # 1. Display User Message immediately
         with st.chat_message("user"):
             st.markdown(prompt)
-        # Save to memory
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         # 2. Convert memory format for Gemini
-        # Gemini expects a list of objects, Streamlit uses a list of dicts. We convert lightly.
         gemini_history = []
-        for msg in st.session_state.messages[:-1]:  # Skip the very last one (we send it separately)
+        for msg in st.session_state.messages[:-1]:
             role = "user" if msg["role"] == "user" else "model"
             gemini_history.append({"role": role, "parts": [msg["content"]]})
 
-        # 3. Get AI Response
+        # 3. Define the Context (These variables come from your Math section above)
         metrics_context = {
             "avg_demand": int(avg_demand),
             "std_dev": int(std_dev),
@@ -179,15 +199,19 @@ if df is not None and not df.empty:
             "sla": target_sla
         }
 
+        # 4. Get AI Response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 response_text = ai_brain.chat_with_data(prompt, gemini_history, df, metrics_context)
                 st.markdown(response_text)
 
-        # 4. Save AI Response to memory
+        # 5. Save AI Response to memory
         st.session_state.messages.append({"role": "assistant", "content": response_text})
 
 else:
-    # (Matches the 'if df is not None' block from earlier)
     if source_option == "🔌 Live Database":
         st.warning("Database is empty. Use the sidebar form to add data!")
+
+# --- FOOTER ---
+st.markdown("---")
+st.caption("© 2026 Digital Capacity Inc. | Powered by SQL & Google Gemini 🧠")
