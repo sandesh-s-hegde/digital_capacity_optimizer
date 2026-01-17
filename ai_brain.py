@@ -15,7 +15,7 @@ def get_model():
     if not api_key:
         return None
     try:
-        # Use the alias that worked for you
+        # We use the alias that points to the stable 1.5 Flash model
         return genai.GenerativeModel('models/gemini-flash-latest')
     except Exception as e:
         print(f"Error configuring model: {e}")
@@ -24,10 +24,12 @@ def get_model():
 
 def analyze_supply_chain(df, metrics):
     """(Legacy) One-off report generation."""
-    if not api_key: return "⚠️ Error: API Key missing. Please set GEMINI_API_KEY in your terminal."
+    if not api_key:
+        return "⚠️ **System Notice:** I need an API Key to think. Please check your settings."
 
     model = get_model()
-    if not model: return "❌ AI Error: Could not load model."
+    if not model:
+        return "🔌 **Connection Error:** I couldn't reach the AI brain. Try again in a moment."
 
     context = f"""
     You are a Supply Chain expert.
@@ -47,12 +49,13 @@ def chat_with_data(user_message, history, df, metrics):
     """
     Handles the chat conversation with error safety.
     """
-    # CRITICAL CHECK: Stop before crashing if no key
+    # CRITICAL CHECK: Friendly error if key is missing
     if not api_key:
-        return "⚠️ System Error: API Key is missing. Please set GEMINI_API_KEY in your environment."
+        return "⚠️ **System Notice:** I need an API Key to think. Please check your settings."
 
     model = get_model()
-    if not model: return "❌ Error: AI Brain not connected."
+    if not model:
+        return "🔌 **Connection Error:** I couldn't reach the AI brain. Try again in a moment."
 
     try:
         # 1. Build the "System Prompt"
