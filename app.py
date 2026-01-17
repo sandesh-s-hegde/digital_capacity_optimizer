@@ -142,7 +142,11 @@ if df is not None and not df.empty:
     eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
     target_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
 
-    safety_stock = inventory_math.calculate_safety_stock(1.0, std_dev, target_sla)
+    safety_stock = inventory_math.calculate_safety_stock(
+        std_dev_demand=std_dev,
+        service_level_z=target_sla,
+        lead_time=1.0
+    )
 
     # C. Display Key Metrics
     st.markdown("### 🔮 Planning Engine")
