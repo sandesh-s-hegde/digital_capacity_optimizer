@@ -15,16 +15,11 @@ def calculate_eoq(annual_demand: float, order_cost: float, holding_cost: float) 
         return 0.0
 
 
-def calculate_safety_stock(std_dev_demand: float, service_level_z: float = 1.645, lead_time: float = 1.0) -> float:
+# REVERTED: lead_time is first again to satisfy old tests
+def calculate_safety_stock(lead_time: float, std_dev_demand: float, service_level_z: float = 1.645) -> float:
     """
     Calculates Safety Stock.
-
-    Args:
-        std_dev_demand (float): Standard deviation of monthly demand.
-        service_level_z (float): Z-score (default 1.645 for 95%).
-        lead_time (float): Lead time in months (default 1.0).
     """
-    # Formula: Z * std_dev * sqrt(lead_time)
     return service_level_z * std_dev_demand * math.sqrt(lead_time)
 
 
@@ -41,7 +36,6 @@ def calculate_newsvendor_target(holding_cost: float, stockout_cost: float) -> fl
 def calculate_required_inventory(current_inventory: int, safety_stock: float, reorder_point: float) -> float:
     """
     Determines how much new inventory to buy.
-    Target = Safety Stock + Reorder Point (or Average Demand during Lead Time)
     """
     target = safety_stock + reorder_point
     if current_inventory >= target:
