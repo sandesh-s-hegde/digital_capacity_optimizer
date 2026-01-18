@@ -92,15 +92,26 @@ st.sidebar.header("🔧 Simulation Parameters")
 holding_cost = st.sidebar.number_input("Holding Cost ($)", value=config.HOLDING_COST)
 stockout_cost = st.sidebar.number_input("Stockout Cost ($)", value=config.STOCKOUT_COST)
 
+# NEW: The Simulator Slider
+st.sidebar.subheader("🎛️ Scenario Planning")
+sim_sla = st.sidebar.slider(
+    "Target Service Level (%)",
+    min_value=50,
+    max_value=99,
+    value=95,
+    step=1,
+    help="Adjust to see how higher reliability increases stock requirements."
+)
+
 # --- SIDEBAR: ABOUT SECTION ---
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ About")
 st.sidebar.info(
     """
-    **Capacity Optimizer v2.1**
+    **Capacity Optimizer v2.2**
 
     🤖 AI Model: Gemini 1.5 Flash
-    📊 Mode: Production
+    📊 Mode: Production w/ Guardrails
 
     *Built by Sandesh Hegde*
     """
@@ -140,18 +151,33 @@ if df is not None and not df.empty:
     std_dev = df['demand'].std()
 
     eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
-    target_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
 
-    # ✅ CORRECTED LOGIC: Uses the original function signature.
-    # We pass '0' as avg_demand so it returns ONLY the safety stock portion.
-    safety_stock = inventory_math.calculate_required_inventory(0, std_dev, target_sla)
+    # 1. ACTUAL (Calculated from Costs)
+    actual_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
+    actual_safety_stock = inventory_math.calculate_required_inventory(0, std_dev, actual_sla)
+
+    # 2. SIMULATED (Calculated from Slider)
+    # Convert slider (e.g., 95) to probability (0.95)
+    sim_safety_stock = inventory_math.calculate_required_inventory(0, std_dev, sim_sla / 100.0)
 
     # C. Display Key Metrics
     st.markdown("### 🔮 Planning Engine")
+
+    # We display the COMPARISON if the slider is different from the calculated optimal
+    difference = int(sim_safety_stock - actual_safety_stock)
+
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Avg Monthly Demand", f"{int(avg_demand)}")
-    c2.metric("Target Service Level", f"{target_sla * 100:.1f}%")
-    c3.metric("Safety Stock", f"{int(safety_stock)}")
+    c2.metric("Optimal SLA (Cost-Based)", f"{actual_sla * 100:.1f}%")
+
+    # The Interactive Metric
+    c3.metric(
+        label=f"Safety Stock ({sim_sla}%)",
+        value=f"{int(sim_safety_stock)}",
+        delta=f"{difference} units" if difference != 0 else None,
+        delta_color="inverse"  # Red means 'more stock = more cost', usually bad, but depends on context
+    )
+
     c4.metric("Optimal Order (EOQ)", f"{int(eoq)}")
 
     st.markdown("---")
@@ -193,13 +219,14 @@ if df is not None and not df.empty:
             role = "user" if msg["role"] == "user" else "model"
             gemini_history.append({"role": role, "parts": [msg["content"]]})
 
-        # 3. Define the Context
+        # 3. Define the Context (These variables come from your Math section above)
         metrics_context = {
             "avg_demand": int(avg_demand),
             "std_dev": int(std_dev),
             "eoq": int(eoq),
-            "safety_stock": int(safety_stock),
-            "sla": target_sla
+            "safety_stock": int(sim_safety_stock),  # Pass the SIMULATED value
+            "sla": sim_sla / 100.0,
+            "actual_safety_stock": int(actual_safety_stock)
         }
 
         # 4. Get AI Response
