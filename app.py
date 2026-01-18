@@ -8,7 +8,7 @@ from datetime import date
 # Import Custom Logic Modules
 import config
 import inventory_math
-import ai_brain  # <--- The AI Brain
+import ai_brain
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Digital Capacity Optimizer", layout="wide")
@@ -16,7 +16,6 @@ st.set_page_config(page_title="Digital Capacity Optimizer", layout="wide")
 
 # --- DATABASE FUNCTIONS ---
 def load_data_from_db():
-    """Connects to the SQL Database and fetches all records."""
     try:
         query = "SELECT * FROM demand_logs ORDER BY date ASC"
         df = pd.read_sql(query, engine)
@@ -29,7 +28,6 @@ def load_data_from_db():
 
 
 def add_new_order(log_date, demand_qty):
-    """Writes a new record to the PostgreSQL database safely."""
     try:
         with Session(engine) as session:
             new_log = DemandLog(
@@ -46,7 +44,7 @@ def add_new_order(log_date, demand_qty):
         return False
 
 
-# --- CSV LOADER (Sandbox Mode) ---
+# --- CSV LOADER ---
 def load_data_from_csv(uploaded_file):
     try:
         df = pd.read_csv(uploaded_file)
@@ -59,144 +57,91 @@ def load_data_from_csv(uploaded_file):
         return None
 
 
-# --- SIDEBAR: CONTROLS ---
+# --- SIDEBAR ---
 st.sidebar.header("⚙️ Data Source")
 source_option = st.sidebar.radio("Mode:", ("🔌 Live Database", "📂 Sandbox (CSV)"))
-
 st.sidebar.markdown("---")
 
-# Input Form (Only visible in Live Mode)
 if source_option == "🔌 Live Database":
     st.sidebar.subheader("📝 Log New Inventory")
-
     with st.sidebar.form("entry_form"):
         new_date = st.date_input("Transaction Date", value=date.today())
-        new_demand = st.number_input(
-            "📦 Order Quantity (Units)",
-            min_value=1,
-            value=100,
-            step=1,
-            format="%d",
-            help="Enter the total units received/demanded."
-        )
-
-        submitted = st.form_submit_button("💾 Save to Database")
-
-        if submitted:
+        new_demand = st.number_input("📦 Order Quantity", min_value=1, value=100)
+        if st.form_submit_button("💾 Save"):
             if add_new_order(new_date, new_demand):
                 st.sidebar.success("✅ Saved!")
                 st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.header("🔧 Simulation Parameters")
+st.sidebar.header("🔧 Parameters")
 holding_cost = st.sidebar.number_input("Holding Cost ($)", value=config.HOLDING_COST)
 stockout_cost = st.sidebar.number_input("Stockout Cost ($)", value=config.STOCKOUT_COST)
 
-# --- SIDEBAR: ABOUT SECTION ---
+# --- ABOUT ---
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ℹ️ About")
-st.sidebar.info(
-    """
-    **Capacity Optimizer v2.1**
-
-    🤖 AI Model: Gemini 1.5 Flash
-    📊 Mode: Production
-
-    *Built by Sandesh Hegde*
-    """
-)
+st.sidebar.info("Capacity Optimizer v2.1\nAI: Gemini Flash")
 
 # --- MAIN PAGE ---
 st.title("📦 Digital Capacity Optimizer")
 
-# 1. LOAD DATA
 df = None
 if source_option == "🔌 Live Database":
     df = load_data_from_db()
-    if df is not None:
-        st.caption(f"Connected to Production Database | {len(df)} Records Loaded")
-else:
-    # Sandbox Mode
-    st.info("Sandbox Mode: Upload a CSV to simulate different demand scenarios.")
-    uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
-    if uploaded_file:
-        df = load_data_from_csv(uploaded_file)
+elif uploaded_file := st.file_uploader("Upload CSV", type=["csv"]):
+    df = load_data_from_csv(uploaded_file)
 
-# 2. VISUALIZE & ANALYZE
 if df is not None and not df.empty:
-
-    # A. Demand Chart
-    st.subheader("📈 Inventory & Demand Trends")
+    # A. Chart
+    st.subheader("📈 Inventory Trends")
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=df['date'], y=df['demand'],
-        mode='lines+markers', name='Demand History',
-        line=dict(color='#2ca02c', width=3)
-    ))
+    fig.add_trace(go.Scatter(x=df['date'], y=df['demand'], mode='lines+markers', name='Demand'))
     st.plotly_chart(fig, use_container_width=True)
 
-    # B. Math Calculations
+    # B. Math
     avg_demand = df['demand'].mean()
     std_dev = df['demand'].std()
 
     eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
     target_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
 
+    # ✅ FIX: Using keyword args to ensure absolute safety with the new math file
     safety_stock = inventory_math.calculate_safety_stock(
         std_dev_demand=std_dev,
         service_level_z=target_sla,
         lead_time=1.0
     )
 
-    # C. Display Key Metrics
-    st.markdown("### 🔮 Planning Engine")
+    # C. Metrics
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Avg Monthly Demand", f"{int(avg_demand)}")
-    c2.metric("Target Service Level", f"{target_sla * 100:.1f}%")
+    c1.metric("Avg Demand", f"{int(avg_demand)}")
+    c2.metric("Target SLA", f"{target_sla * 100:.1f}%")
     c3.metric("Safety Stock", f"{int(safety_stock)}")
-    c4.metric("Optimal Order (EOQ)", f"{int(eoq)}")
+    c4.metric("EOQ", f"{int(eoq)}")
 
     st.markdown("---")
 
-    # --- 3. THE CONVERSATIONAL AI ---
-
-    # Layout: Title left, Reset Button right
-    col_title, col_btn = st.columns([5, 1])
-
-    with col_title:
-        st.subheader("💬 Chat with your Supply Chain Data")
-
-    with col_btn:
-        # The Reset Button logic
-        if st.button("🗑️ Clear", help="Reset Chat History"):
+    # --- CHAT ---
+    col_t, col_b = st.columns([5, 1])
+    with col_t:
+        st.subheader("💬 Chat with Data")
+    with col_b:
+        if st.button("🗑️ Clear"):
             st.session_state.messages = []
             st.rerun()
 
-    # A. Initialize Chat History in Session State
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    if "messages" not in st.session_state: st.session_state.messages = []
 
-    # B. Display Previous Messages
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]): st.markdown(msg["content"])
 
-    # C. Handle New Input
-    if prompt := st.chat_input("Ask about your inventory (e.g., 'Why is safety stock high?')"):
-
-        # 1. Display User Message immediately
-        with st.chat_message("user"):
-            st.markdown(prompt)
+    if prompt := st.chat_input("Ask about inventory..."):
+        with st.chat_message("user"): st.markdown(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # 2. Convert memory format for Gemini
-        gemini_history = []
-        for msg in st.session_state.messages[:-1]:
-            role = "user" if msg["role"] == "user" else "model"
-            gemini_history.append({"role": role, "parts": [msg["content"]]})
+        gemini_hist = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]}
+                       for m in st.session_state.messages[:-1]]
 
-        # 3. Define the Context (These variables come from your Math section above)
-        metrics_context = {
+        ctx = {
             "avg_demand": int(avg_demand),
             "std_dev": int(std_dev),
             "eoq": int(eoq),
@@ -204,19 +149,15 @@ if df is not None and not df.empty:
             "sla": target_sla
         }
 
-        # 4. Get AI Response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                response_text = ai_brain.chat_with_data(prompt, gemini_history, df, metrics_context)
-                st.markdown(response_text)
-
-        # 5. Save AI Response to memory
-        st.session_state.messages.append({"role": "assistant", "content": response_text})
+                response = ai_brain.chat_with_data(prompt, gemini_hist, df, ctx)
+                st.markdown(response)
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
 else:
     if source_option == "🔌 Live Database":
-        st.warning("Database is empty. Use the sidebar form to add data!")
+        st.warning("Database empty. Add data!")
 
-# --- FOOTER ---
 st.markdown("---")
-st.caption("© 2026 Digital Capacity Inc. | Powered by SQL & Google Gemini 🧠")
+st.caption("© 2026 Digital Capacity Inc.")
