@@ -8,7 +8,8 @@ from datetime import date
 # Import Custom Logic Modules
 import config
 import inventory_math
-import ai_brain  # <--- The AI Brain
+import ai_brain
+import report_gen  # <--- NEW: The PDF Generator
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Digital Capacity Optimizer", layout="wide")
@@ -92,7 +93,7 @@ st.sidebar.header("🔧 Simulation Parameters")
 holding_cost = st.sidebar.number_input("Holding Cost ($)", value=config.HOLDING_COST)
 stockout_cost = st.sidebar.number_input("Stockout Cost ($)", value=config.STOCKOUT_COST)
 
-# NEW: The Simulator Slider
+# Simulator Slider
 st.sidebar.subheader("🎛️ Scenario Planning")
 sim_sla = st.sidebar.slider(
     "Target Service Level (%)",
@@ -108,10 +109,10 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ About")
 st.sidebar.info(
     """
-    **Capacity Optimizer v2.2**
+    **Capacity Optimizer v2.3**
 
     🤖 AI Model: Gemini 1.5 Flash
-    📊 Mode: Production w/ Guardrails
+    📊 Mode: Production w/ Reports
 
     *Built by Sandesh Hegde*
     """
@@ -157,28 +158,66 @@ if df is not None and not df.empty:
     actual_safety_stock = inventory_math.calculate_required_inventory(0, std_dev, actual_sla)
 
     # 2. SIMULATED (Calculated from Slider)
-    # Convert slider (e.g., 95) to probability (0.95)
     sim_safety_stock = inventory_math.calculate_required_inventory(0, std_dev, sim_sla / 100.0)
+
+    # Context dictionary for AI & Reporting
+    metrics_context = {
+        "avg_demand": int(avg_demand),
+        "std_dev": int(std_dev),
+        "eoq": int(eoq),
+        "safety_stock": int(sim_safety_stock),  # Sim Value
+        "sla": sim_sla / 100.0,
+        "actual_safety_stock": int(actual_safety_stock)
+    }
 
     # C. Display Key Metrics
     st.markdown("### 🔮 Planning Engine")
 
-    # We display the COMPARISON if the slider is different from the calculated optimal
     difference = int(sim_safety_stock - actual_safety_stock)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Avg Monthly Demand", f"{int(avg_demand)}")
     c2.metric("Optimal SLA (Cost-Based)", f"{actual_sla * 100:.1f}%")
 
-    # The Interactive Metric
     c3.metric(
         label=f"Safety Stock ({sim_sla}%)",
         value=f"{int(sim_safety_stock)}",
         delta=f"{difference} units" if difference != 0 else None,
-        delta_color="inverse"  # Red means 'more stock = more cost', usually bad, but depends on context
+        delta_color="inverse"
     )
 
     c4.metric("Optimal Order (EOQ)", f"{int(eoq)}")
+
+    st.markdown("---")
+
+    # --- NEW: EXECUTIVE REPORTING ---
+    st.subheader("📑 Executive Reporting")
+
+    col_rep_1, col_rep_2 = st.columns([3, 1])
+
+    with col_rep_1:
+        st.caption("Generate a PDF summary of the current simulation parameters and AI risk assessment.")
+
+    with col_rep_2:
+        if st.button("📄 Generate Report"):
+            with st.spinner("Asking AI to write summary..."):
+                # 1. Get a specific summary from the AI Brain for the PDF
+                summary_prompt = "Write a strict 4-sentence executive summary of these metrics for a PDF report. Be professional."
+
+                # We reuse the chat function but pass empty history so it focuses only on this prompt
+                ai_summary = ai_brain.chat_with_data(summary_prompt, [], df, metrics_context)
+
+            with st.spinner("Rendering PDF..."):
+                # 2. Create the PDF
+                pdf_bytes = report_gen.generate_pdf(metrics_context, ai_summary)
+
+                # 3. Show Download Button
+                st.download_button(
+                    label="⬇️ Download PDF",
+                    data=pdf_bytes,
+                    file_name="inventory_report.pdf",
+                    mime="application/pdf"
+                )
 
     st.markdown("---")
 
@@ -219,23 +258,13 @@ if df is not None and not df.empty:
             role = "user" if msg["role"] == "user" else "model"
             gemini_history.append({"role": role, "parts": [msg["content"]]})
 
-        # 3. Define the Context (These variables come from your Math section above)
-        metrics_context = {
-            "avg_demand": int(avg_demand),
-            "std_dev": int(std_dev),
-            "eoq": int(eoq),
-            "safety_stock": int(sim_safety_stock),  # Pass the SIMULATED value
-            "sla": sim_sla / 100.0,
-            "actual_safety_stock": int(actual_safety_stock)
-        }
-
-        # 4. Get AI Response
+        # 3. Get AI Response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 response_text = ai_brain.chat_with_data(prompt, gemini_history, df, metrics_context)
                 st.markdown(response_text)
 
-        # 5. Save AI Response to memory
+        # 4. Save AI Response to memory
         st.session_state.messages.append({"role": "assistant", "content": response_text})
 
 else:

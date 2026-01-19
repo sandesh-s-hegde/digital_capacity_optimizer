@@ -9,3 +9,4 @@ scipy
 statsmodels
 protobuf
 grpcio
+fpdf2
