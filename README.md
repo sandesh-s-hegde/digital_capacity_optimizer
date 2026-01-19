@@ -1,13 +1,12 @@
 # 🧠 AI-Powered Digital Capacity Optimizer
 
 **Author:** Sandesh Hegde  
-**Version:** v2.1.0 (Cognitive Edition)  
+**Version:** v2.3.0 (Cognitive Edition)  
 **License:** MIT  
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen) ![AI](https://img.shields.io/badge/AI-Gemini_Flash-blueviolet) ![Docker](https://img.shields.io/badge/docker-supported-blue)
 
 ## 🚀 Live Demo
-**[Click here to launch the App](https://digital-capacity-optimizer.onrender.com/)**  
-*(Note: Hosted on Render Free Tier. Please allow 30s for cold start.)*
+**[Click here to launch the App](https://digital-capacity-optimizer.onrender.com/)** *(Note: Hosted on Render Free Tier. Please allow 30s for cold start.)*
 
 ---
 
@@ -30,19 +29,19 @@ The application follows a modern **Cognitive 3-Tier Architecture**:
 2.  **Intelligence:** Python Logic (EOQ Models) + **Gemini AI (Reasoning)**
 3.  **Data:** PostgreSQL (Production) / SQLite (Sandbox)
 
-**Data Flow:**  
-`User Input` -> `SQL Database` -> `Python Math Engine` -> `LLM Context` -> `Strategic Report`
+**Data Flow:** `User Input` -> `SQL Database` -> `Python Math Engine` -> `LLM Context` -> `Strategic Report`
 
 ---
 
 ## 🎯 Key Features
 
 ### 🧠 Cognitive Intelligence (New)
-- **Automated Reporting:** Click "Generate AI Report" to get a real-time executive summary.
-- **Risk Analysis:** The AI detects high volatility and explains *why* safety stock is needed.
+- **📄 Executive PDF Reporting:** One-click generation of professional PDF summaries for stakeholder meetings.
+- **🛡️ AI Guardrails:** Strict negative constraints prevent the AI from answering off-topic questions or hallucinating math.
 - **Strategic Recommendations:** Translates math (StdDev, EOQ) into plain English advice.
 
 ### 🏭 Core Supply Chain Ops
+- **🎛️ Scenario Simulation:** Interactive slider to test "What-If" scenarios (e.g., 95% vs 99% Service Levels) in real-time.
 - **🔌 Zero-Touch Loading:** Auto-connects to the cloud database on launch.
 - **📝 Read/Write System:** Log new orders directly via the sidebar form.
 - **📊 Interactive Charts:** Zoomable demand history and trend lines.
@@ -54,8 +53,8 @@ The application follows a modern **Cognitive 3-Tier Architecture**:
 
 The system utilizes a hybrid approach of **Deterministic Math** and **Probabilistic AI**:
 
-1.  **The Math:** Calculates the exact Safety Stock needed for a 99.1% Service Level.
-2.  **The AI:** Analyzes the context (e.g., "Volatility is 10x higher than normal") and warns the user.
+1.  **The Math:** Calculates the exact Safety Stock needed for a target Service Level (e.g., 99.1%) based on the Simulation Slider.
+2.  **The AI:** Analyzes the context (e.g., "Volatility is 10x higher than normal"), sanitizes the output, and compiles a downloadable PDF report.
 
 ---
 
@@ -65,6 +64,7 @@ The system utilizes a hybrid approach of **Deterministic Math** and **Probabilis
 - **Infrastructure:** Docker, Render (Cloud)
 - **Database:** PostgreSQL (Prod), SQLAlchemy ORM
 - **Frontend:** Streamlit, Plotly
+- **Reporting:** FPDF2 (PDF Generation)
 - **Language:** Python 3.11
 
 ---
