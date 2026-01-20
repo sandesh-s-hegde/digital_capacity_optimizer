@@ -4,12 +4,16 @@ import plotly.graph_objects as go
 from sqlalchemy.orm import Session
 from database_schema import engine, DemandLog
 from datetime import date
+from dotenv import load_dotenv  # <--- Loads .env file for Cloud DB
 
 # Import Custom Logic Modules
 import config
 import inventory_math
 import ai_brain
-import report_gen  # <--- NEW: The PDF Generator
+import report_gen
+
+# --- LOAD SECRETS ---
+load_dotenv()
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Digital Capacity Optimizer", layout="wide")
@@ -17,7 +21,7 @@ st.set_page_config(page_title="Digital Capacity Optimizer", layout="wide")
 
 # --- DATABASE FUNCTIONS ---
 def load_data_from_db():
-    """Connects to the SQL Database and fetches all records."""
+    """Connects to the Cloud Database and fetches all records."""
     try:
         query = "SELECT * FROM demand_logs ORDER BY date ASC"
         df = pd.read_sql(query, engine)
@@ -30,7 +34,7 @@ def load_data_from_db():
 
 
 def add_new_order(log_date, demand_qty):
-    """Writes a new record to the PostgreSQL database safely."""
+    """Writes a new record to the Cloud Database safely."""
     try:
         with Session(engine) as session:
             new_log = DemandLog(
@@ -112,7 +116,7 @@ st.sidebar.info(
     **Capacity Optimizer v2.3**
 
     🤖 AI Model: Gemini 1.5 Flash
-    📊 Mode: Production w/ Reports
+    ☁️ Database: Neon PostgreSQL
 
     *Built by Sandesh Hegde*
     """
@@ -126,7 +130,7 @@ df = None
 if source_option == "🔌 Live Database":
     df = load_data_from_db()
     if df is not None:
-        st.caption(f"Connected to Production Database | {len(df)} Records Loaded")
+        st.caption(f"Connected to Cloud Database | {len(df)} Records Loaded")
 else:
     # Sandbox Mode
     st.info("Sandbox Mode: Upload a CSV to simulate different demand scenarios.")
@@ -151,6 +155,10 @@ if df is not None and not df.empty:
     avg_demand = df['demand'].mean()
     std_dev = df['demand'].std()
 
+    # ✅ FIX: Handle NaN when there is only 1 record (or 0 variance)
+    if pd.isna(std_dev):
+        std_dev = 0.0
+
     eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
 
     # 1. ACTUAL (Calculated from Costs)
@@ -165,7 +173,7 @@ if df is not None and not df.empty:
         "avg_demand": int(avg_demand),
         "std_dev": int(std_dev),
         "eoq": int(eoq),
-        "safety_stock": int(sim_safety_stock),  # Sim Value
+        "safety_stock": int(sim_safety_stock),
         "sla": sim_sla / 100.0,
         "actual_safety_stock": int(actual_safety_stock)
     }
@@ -201,17 +209,12 @@ if df is not None and not df.empty:
     with col_rep_2:
         if st.button("📄 Generate Report"):
             with st.spinner("Asking AI to write summary..."):
-                # 1. Get a specific summary from the AI Brain for the PDF
                 summary_prompt = "Write a strict 4-sentence executive summary of these metrics for a PDF report. Be professional."
-
-                # We reuse the chat function but pass empty history so it focuses only on this prompt
                 ai_summary = ai_brain.chat_with_data(summary_prompt, [], df, metrics_context)
 
             with st.spinner("Rendering PDF..."):
-                # 2. Create the PDF
                 pdf_bytes = report_gen.generate_pdf(metrics_context, ai_summary)
 
-                # 3. Show Download Button
                 st.download_button(
                     label="⬇️ Download PDF",
                     data=pdf_bytes,
@@ -223,48 +226,39 @@ if df is not None and not df.empty:
 
     # --- 3. THE CONVERSATIONAL AI ---
 
-    # Layout: Title left, Reset Button right
     col_title, col_btn = st.columns([5, 1])
 
     with col_title:
         st.subheader("💬 Chat with your Supply Chain Data")
 
     with col_btn:
-        # The Reset Button logic
         if st.button("🗑️ Clear", help="Reset Chat History"):
             st.session_state.messages = []
             st.rerun()
 
-    # A. Initialize Chat History in Session State
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # B. Display Previous Messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # C. Handle New Input
-    if prompt := st.chat_input("Ask about your inventory (e.g., 'Why is safety stock high?')"):
+    if prompt := st.chat_input("Ask about your inventory..."):
 
-        # 1. Display User Message immediately
         with st.chat_message("user"):
             st.markdown(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # 2. Convert memory format for Gemini
         gemini_history = []
         for msg in st.session_state.messages[:-1]:
             role = "user" if msg["role"] == "user" else "model"
             gemini_history.append({"role": role, "parts": [msg["content"]]})
 
-        # 3. Get AI Response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 response_text = ai_brain.chat_with_data(prompt, gemini_history, df, metrics_context)
                 st.markdown(response_text)
 
-        # 4. Save AI Response to memory
         st.session_state.messages.append({"role": "assistant", "content": response_text})
 
 else:
@@ -273,4 +267,4 @@ else:
 
 # --- FOOTER ---
 st.markdown("---")
-st.caption("© 2026 Digital Capacity Inc. | Powered by SQL & Google Gemini 🧠")
+st.caption("© 2026 Digital Capacity Inc. | Powered by SQL, Neon & Google Gemini 🧠")

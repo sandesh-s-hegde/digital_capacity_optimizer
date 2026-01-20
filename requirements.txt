@@ -10,3 +10,4 @@ statsmodels
 protobuf
 grpcio
 fpdf2
+python-dotenv
