@@ -1,19 +1,27 @@
+"""
+inventory_math.py
+Core optimization logic for inventory management.
+(Cloud-Optimized: Uses pure math instead of heavy scipy/numpy libraries)
+"""
 import math
 
 
-# --- HELPER: Pure Python Normal Distribution Inverse (Abramowitz & Stegun approx) ---
-# This removes the need for scipy or statistics modules completely.
-def norm_inv(p):
-    """
-    Approximates the Inverse Standard Normal CDF (Z-Score).
-    Accurate enough for supply chain calculations.
-    """
-    if p <= 0.0: return -3.0  # Guardrail for 0%
-    if p >= 1.0: return 3.0  # Guardrail for 100%
+# --- HELPER: Manual Normal Distribution Functions ---
+# We write these manually to avoid installing the 100MB+ Scipy library
 
-    # If p < 0.5, use symmetry
+def norm_cdf(x):
+    """Cumulative Distribution Function (CDF) approximation."""
+    return (1.0 + math.erf(x / math.sqrt(2.0))) / 2.0
+
+
+def norm_ppf(p):
+    """Inverse CDF (Percent Point Function) approximation."""
+    # Source: Abramowitz and Stegun approximation for standard normal distribution
+    if p >= 1.0: return 5.0  # Guardrail
+    if p <= 0.0: return -5.0  # Guardrail
+
     if p < 0.5:
-        return -norm_inv(1.0 - p)
+        return -norm_ppf(1.0 - p)
 
     t = math.sqrt(-2.0 * math.log(1.0 - p))
     numerator = (0.010328 * t + 0.802853) * t + 2.515517
@@ -22,35 +30,55 @@ def norm_inv(p):
     return t - (numerator / denominator)
 
 
-# --- MAIN FUNCTIONS ---
+# --- MAIN LOGIC ---
 
-def calculate_eoq(annual_demand, ordering_cost, holding_cost):
-    if annual_demand <= 0 or ordering_cost <= 0 or holding_cost <= 0:
-        return 0
-    return math.sqrt((2 * annual_demand * ordering_cost) / holding_cost)
+def calculate_eoq(annual_demand: float, order_cost: float, holding_cost: float) -> float:
+    """Calculates Economic Order Quantity (EOQ)."""
+    if holding_cost == 0: return 0.0
+    return math.sqrt((2 * annual_demand * order_cost) / holding_cost)
 
 
-def calculate_newsvendor_target(holding_cost, stockout_cost):
-    if (holding_cost + stockout_cost) == 0:
-        return 0.5
-    return stockout_cost / (holding_cost + stockout_cost)
+def calculate_safety_stock(max_daily_demand: float, avg_daily_demand: float, lead_time: int) -> float:
+    """Calculates Buffer Stock to survive delays."""
+    return (max_daily_demand - avg_daily_demand) * lead_time
+
+
+def calculate_service_level(avg_demand: float, std_dev_demand: float, total_inventory: float) -> float:
+    """Calculates the probability (%) of NOT running out of stock (SLA)."""
+    if std_dev_demand == 0:
+        return 1.0 if total_inventory >= avg_demand else 0.0
+
+    z_score = (total_inventory - avg_demand) / std_dev_demand
+
+    # REPLACED: norm.cdf(z_score) -> norm_cdf(z_score)
+    probability = norm_cdf(z_score)
+    return round(float(probability), 4)
+
+
+def calculate_newsvendor_target(holding_cost: float, stockout_cost: float) -> float:
+    """Calculates the Optimal Service Level (Critical Ratio)."""
+    if (stockout_cost + holding_cost) == 0: return 0.0
+
+    critical_ratio = stockout_cost / (stockout_cost + holding_cost)
+    return round(critical_ratio, 4)
+
+
+def calculate_required_inventory(avg_demand: float, std_dev_demand: float, target_sla: float) -> float:
+    """Calculates stock needed for a specific SLA."""
+    # REPLACED: norm.ppf(target_sla) -> norm_ppf(target_sla)
+    z_score = norm_ppf(target_sla)
+
+    required_safety_stock = z_score * std_dev_demand
+    return round(avg_demand + required_safety_stock, 2)
 
 
 def calculate_advanced_safety_stock(avg_demand, std_dev_demand, avg_lead_time, std_dev_lead_time, target_service_level):
-    # Safety Bounds
-    if target_service_level >= 0.999: target_service_level = 0.999
-    if target_service_level <= 0.001: target_service_level = 0.001
+    """Calculates Safety Stock accounting for Demand + Lead Time Risk."""
+    # REPLACED: norm.ppf -> norm_ppf
+    z_score = norm_ppf(target_service_level)
 
-    # 1. Get Z-Score using our manual function
-    z_score = norm_inv(target_service_level)
-
-    # 2. Variance due to Demand Fluctuations
     demand_risk = avg_lead_time * (std_dev_demand ** 2)
-
-    # 3. Variance due to Supplier Delays
     supply_risk = (avg_demand ** 2) * (std_dev_lead_time ** 2)
-
-    # 4. Combined Risk
     combined_sigma = math.sqrt(demand_risk + supply_risk)
 
     return z_score * combined_sigma
