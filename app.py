@@ -11,7 +11,8 @@ import config
 import inventory_math
 import ai_brain
 import report_gen
-import forecast  # <--- NEW: Forecasting Module
+import forecast  # Forecast Engine
+import profit_optimizer  # Profit Engine
 
 # --- LOAD SECRETS ---
 load_dotenv()
@@ -114,11 +115,12 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ About")
 st.sidebar.info(
     """
-    **Capacity Optimizer v2.4**
+    **Capacity Optimizer v2.5**
 
     🤖 AI Model: Gemini 1.5 Flash
     ☁️ Database: Neon PostgreSQL
-    🔮 Engine: Linear Regression
+    🔮 Forecasting: Linear Regression
+    💰 Optimization: Profit Heatmap
 
     *Built by Sandesh Hegde*
     """
@@ -140,50 +142,9 @@ else:
     if uploaded_file:
         df = load_data_from_csv(uploaded_file)
 
-# 2. VISUALIZE & ANALYZE
 if df is not None and not df.empty:
 
-    # A. Demand Chart & Forecasting
-    st.subheader("📈 Inventory & Demand Trends")
-
-    # Toggle for Forecasting
-    col_chart_1, col_chart_2 = st.columns([3, 1])
-    with col_chart_2:
-        show_forecast = st.checkbox("🔮 Show AI Demand Forecast", value=True, key="forecast_toggle")
-
-    fig = go.Figure()
-
-    # 1. Plot Historical Data (Solid Green Line)
-    fig.add_trace(go.Scatter(
-        x=df['date'], y=df['demand'],
-        mode='lines+markers', name='Actual History',
-        line=dict(color='#2ca02c', width=3)
-    ))
-
-    # 2. Calculate & Plot Forecast (Dashed Blue Line)
-    if show_forecast:
-        forecast_df = forecast.generate_forecast(df)
-
-        if forecast_df is not None:
-            # Connect the last historical point to the first forecast point
-            last_hist_date = df['date'].max()
-            last_hist_val = df.loc[df['date'] == last_hist_date, 'demand'].values[0]
-
-            # Add a "Bridge" point so the lines connect nicely
-            bridge_df = pd.DataFrame({'date': [last_hist_date], 'demand': [last_hist_val]})
-            plot_forecast = pd.concat([bridge_df, forecast_df])
-
-            fig.add_trace(go.Scatter(
-                x=plot_forecast['date'], y=plot_forecast['demand'],
-                mode='lines+markers', name='Projected Forecast',
-                line=dict(color='#1f77b4', width=3, dash='dash')
-            ))
-        else:
-            st.warning("Not enough data to generate a forecast yet (Need 2+ points).")
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    # B. Math Calculations
+    # CALCULATE BASE METRICS ONCE (Used across tabs)
     avg_demand = df['demand'].mean()
     std_dev = df['demand'].std()
 
@@ -191,16 +152,11 @@ if df is not None and not df.empty:
     if pd.isna(std_dev):
         std_dev = 0.0
 
-    eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
-
-    # 1. ACTUAL (Calculated from Costs)
     actual_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
     actual_safety_stock = inventory_math.calculate_required_inventory(0, std_dev, actual_sla)
-
-    # 2. SIMULATED (Calculated from Slider)
     sim_safety_stock = inventory_math.calculate_required_inventory(0, std_dev, sim_sla / 100.0)
+    eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
 
-    # Context dictionary for AI & Reporting
     metrics_context = {
         "avg_demand": int(avg_demand),
         "std_dev": int(std_dev),
@@ -210,88 +166,165 @@ if df is not None and not df.empty:
         "actual_safety_stock": int(actual_safety_stock)
     }
 
-    # C. Display Key Metrics
-    st.markdown("### 🔮 Planning Engine")
+    # --- CREATE TABS ---
+    tab1, tab2 = st.tabs(["📊 Inventory Dashboard", "💰 Profit Optimizer"])
 
-    difference = int(sim_safety_stock - actual_safety_stock)
+    # ==========================
+    # TAB 1: EXISTING DASHBOARD
+    # ==========================
+    with tab1:
+        # A. Demand Chart & Forecasting
+        st.subheader("📈 Inventory & Demand Trends")
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Avg Monthly Demand", f"{int(avg_demand)}")
-    c2.metric("Optimal SLA (Cost-Based)", f"{actual_sla * 100:.1f}%")
+        col_chart_1, col_chart_2 = st.columns([3, 1])
+        with col_chart_2:
+            show_forecast = st.checkbox("🔮 Show AI Demand Forecast", value=True, key="forecast_toggle")
 
-    c3.metric(
-        label=f"Safety Stock ({sim_sla}%)",
-        value=f"{int(sim_safety_stock)}",
-        delta=f"{difference} units" if difference != 0 else None,
-        delta_color="inverse"
-    )
+        fig = go.Figure()
 
-    c4.metric("Optimal Order (EOQ)", f"{int(eoq)}")
+        # 1. Plot Historical Data (Solid Green Line)
+        fig.add_trace(go.Scatter(
+            x=df['date'], y=df['demand'],
+            mode='lines+markers', name='Actual History',
+            line=dict(color='#2ca02c', width=3)
+        ))
 
-    st.markdown("---")
+        # 2. Calculate & Plot Forecast (Dashed Blue Line)
+        if show_forecast:
+            forecast_df = forecast.generate_forecast(df)
 
-    # --- NEW: EXECUTIVE REPORTING ---
-    st.subheader("📑 Executive Reporting")
+            if forecast_df is not None:
+                # Connect the last historical point to the first forecast point
+                last_hist_date = df['date'].max()
+                last_hist_val = df.loc[df['date'] == last_hist_date, 'demand'].values[0]
 
-    col_rep_1, col_rep_2 = st.columns([3, 1])
+                # Add a "Bridge" point
+                bridge_df = pd.DataFrame({'date': [last_hist_date], 'demand': [last_hist_val]})
+                plot_forecast = pd.concat([bridge_df, forecast_df])
 
-    with col_rep_1:
-        st.caption("Generate a PDF summary of the current simulation parameters and AI risk assessment.")
+                fig.add_trace(go.Scatter(
+                    x=plot_forecast['date'], y=plot_forecast['demand'],
+                    mode='lines+markers', name='Projected Forecast',
+                    line=dict(color='#1f77b4', width=3, dash='dash')
+                ))
+            else:
+                st.warning("Not enough data to generate a forecast yet (Need 2+ points).")
 
-    with col_rep_2:
-        if st.button("📄 Generate Report"):
-            with st.spinner("Asking AI to write summary..."):
-                summary_prompt = "Write a strict 4-sentence executive summary of these metrics for a PDF report. Be professional."
-                ai_summary = ai_brain.chat_with_data(summary_prompt, [], df, metrics_context)
+        st.plotly_chart(fig, use_container_width=True)
 
-            with st.spinner("Rendering PDF..."):
-                pdf_bytes = report_gen.generate_pdf(metrics_context, ai_summary)
+        # B. Display Key Metrics
+        st.markdown("### 🔮 Planning Engine")
 
-                st.download_button(
-                    label="⬇️ Download PDF",
-                    data=pdf_bytes,
-                    file_name="inventory_report.pdf",
-                    mime="application/pdf"
-                )
+        difference = int(sim_safety_stock - actual_safety_stock)
 
-    st.markdown("---")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Avg Monthly Demand", f"{int(avg_demand)}")
+        c2.metric("Optimal SLA (Cost-Based)", f"{actual_sla * 100:.1f}%")
 
-    # --- 3. THE CONVERSATIONAL AI ---
+        c3.metric(
+            label=f"Safety Stock ({sim_sla}%)",
+            value=f"{int(sim_safety_stock)}",
+            delta=f"{difference} units" if difference != 0 else None,
+            delta_color="inverse"
+        )
 
-    col_title, col_btn = st.columns([5, 1])
+        c4.metric("Optimal Order (EOQ)", f"{int(eoq)}")
 
-    with col_title:
-        st.subheader("💬 Chat with your Supply Chain Data")
+        st.markdown("---")
 
-    with col_btn:
-        if st.button("🗑️ Clear", help="Reset Chat History"):
+        # C. Executive Reporting
+        st.subheader("📑 Executive Reporting")
+
+        col_rep_1, col_rep_2 = st.columns([3, 1])
+
+        with col_rep_1:
+            st.caption("Generate a PDF summary of the current simulation parameters and AI risk assessment.")
+
+        with col_rep_2:
+            if st.button("📄 Generate Report"):
+                with st.spinner("Asking AI to write summary..."):
+                    summary_prompt = "Write a strict 4-sentence executive summary of these metrics for a PDF report. Be professional."
+                    ai_summary = ai_brain.chat_with_data(summary_prompt, [], df, metrics_context)
+
+                with st.spinner("Rendering PDF..."):
+                    pdf_bytes = report_gen.generate_pdf(metrics_context, ai_summary)
+
+                    st.download_button(
+                        label="⬇️ Download PDF",
+                        data=pdf_bytes,
+                        file_name="inventory_report.pdf",
+                        mime="application/pdf"
+                    )
+
+        st.markdown("---")
+
+        # D. The Conversational AI
+        col_title, col_btn = st.columns([5, 1])
+
+        with col_title:
+            st.subheader("💬 Chat with your Supply Chain Data")
+
+        with col_btn:
+            if st.button("🗑️ Clear", help="Reset Chat History"):
+                st.session_state.messages = []
+                st.rerun()
+
+        if "messages" not in st.session_state:
             st.session_state.messages = []
-            st.rerun()
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+        if prompt := st.chat_input("Ask about your inventory..."):
 
-    if prompt := st.chat_input("Ask about your inventory..."):
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            st.session_state.messages.append({"role": "user", "content": prompt})
 
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        st.session_state.messages.append({"role": "user", "content": prompt})
+            gemini_history = []
+            for msg in st.session_state.messages[:-1]:
+                role = "user" if msg["role"] == "user" else "model"
+                gemini_history.append({"role": role, "parts": [msg["content"]]})
 
-        gemini_history = []
-        for msg in st.session_state.messages[:-1]:
-            role = "user" if msg["role"] == "user" else "model"
-            gemini_history.append({"role": role, "parts": [msg["content"]]})
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    response_text = ai_brain.chat_with_data(prompt, gemini_history, df, metrics_context)
+                    st.markdown(response_text)
 
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                response_text = ai_brain.chat_with_data(prompt, gemini_history, df, metrics_context)
-                st.markdown(response_text)
+            st.session_state.messages.append({"role": "assistant", "content": response_text})
 
-        st.session_state.messages.append({"role": "assistant", "content": response_text})
+    # ==========================
+    # TAB 2: PROFIT OPTIMIZER
+    # ==========================
+    with tab2:
+        st.subheader("💸 Profit & Loss Simulator")
+
+        st.markdown(
+            "Use this tool to find the 'Sweet Spot' between ordering too much (Holding Cost) and too little (Stockout Cost).")
+
+        c_input1, c_input2 = st.columns(2)
+        unit_cost = c_input1.number_input("Manufacturing Unit Cost ($)", value=50.0, step=1.0)
+        selling_price = c_input2.number_input("Retail Selling Price ($)", value=85.0, step=1.0)
+
+        if selling_price <= unit_cost:
+            st.error("⚠️ Selling Price must be higher than Unit Cost to generate profit!")
+        else:
+            # Generate the Heatmap
+            heatmap_fig = profit_optimizer.calculate_profit_scenarios(
+                avg_demand, std_dev, holding_cost, stockout_cost, unit_cost, selling_price
+            )
+            st.plotly_chart(heatmap_fig, use_container_width=True)
+
+            st.info(
+                """
+                **How to read this Heatmap:**
+                * **Blue Areas 🔵:** High Profit zones. You want to be here.
+                * **Red Areas 🔴:** Loss zones. This happens if you order way too much (unsold stock) or way too little (missed sales).
+                * **The X-Axis:** Represents your **Decision** (How much to order).
+                * **The Y-Axis:** Represents the **Market Reality** (Actual Demand).
+                """
+            )
 
 else:
     if source_option == "🔌 Live Database":
