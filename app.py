@@ -95,11 +95,30 @@ if source_option == "🔌 Live Database":
                 st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.header("🔧 Simulation Parameters")
+
+# 1. Cost Parameters
+st.sidebar.header("🔧 Financials")
 holding_cost = st.sidebar.number_input("Holding Cost ($)", value=config.HOLDING_COST)
 stockout_cost = st.sidebar.number_input("Stockout Cost ($)", value=config.STOCKOUT_COST)
 
-# Simulator Slider
+# 2. Supplier Reliability (NEW)
+st.sidebar.markdown("---")
+st.sidebar.header("🚢 Supplier Reliability")
+
+lead_time_months = st.sidebar.slider(
+    "Avg Lead Time (Months)",
+    min_value=0.5, max_value=6.0, value=1.0, step=0.5,
+    help="How long does it take for stock to arrive?"
+)
+
+lead_time_volatility = st.sidebar.slider(
+    "Lead Time Variance (Months)",
+    min_value=0.0, max_value=2.0, value=0.0, step=0.1,
+    help="0 = Always on time. Higher = Unpredictable delays (e.g., customs, weather)."
+)
+
+# 3. Service Level Target
+st.sidebar.markdown("---")
 st.sidebar.subheader("🎛️ Scenario Planning")
 sim_sla = st.sidebar.slider(
     "Target Service Level (%)",
@@ -115,12 +134,13 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ About")
 st.sidebar.info(
     """
-    **Capacity Optimizer v2.5**
+    **Capacity Optimizer v2.6**
 
     🤖 AI Model: Gemini 1.5 Flash
     ☁️ Database: Neon PostgreSQL
     🔮 Forecasting: Linear Regression
     💰 Optimization: Profit Heatmap
+    🚢 Risk Engine: Stochastic RSS
 
     *Built by Sandesh Hegde*
     """
@@ -144,26 +164,37 @@ else:
 
 if df is not None and not df.empty:
 
-    # CALCULATE BASE METRICS ONCE (Used across tabs)
+    # --- MATH ENGINE (Advanced) ---
     avg_demand = df['demand'].mean()
-    std_dev = df['demand'].std()
+    std_dev_demand = df['demand'].std()
 
-    # Handle NaN for single record
-    if pd.isna(std_dev):
-        std_dev = 0.0
+    if pd.isna(std_dev_demand): std_dev_demand = 0.0
 
+    # A. Optimal SLA (Cost-Based)
     actual_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
-    actual_safety_stock = inventory_math.calculate_required_inventory(0, std_dev, actual_sla)
-    sim_safety_stock = inventory_math.calculate_required_inventory(0, std_dev, sim_sla / 100.0)
+
+    # B. Safety Stock (Risk-Adjusted)
+    # This now accounts for both Demand Fluctuation AND Supplier Delay Risk
+    sim_safety_stock = inventory_math.calculate_advanced_safety_stock(
+        avg_demand,
+        std_dev_demand,
+        lead_time_months,
+        lead_time_volatility,
+        sim_sla / 100.0
+    )
+
+    # C. EOQ
     eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
 
     metrics_context = {
         "avg_demand": int(avg_demand),
-        "std_dev": int(std_dev),
+        "std_dev": int(std_dev_demand),
+        "lead_time": lead_time_months,
+        "lead_time_risk": lead_time_volatility,
         "eoq": int(eoq),
         "safety_stock": int(sim_safety_stock),
         "sla": sim_sla / 100.0,
-        "actual_safety_stock": int(actual_safety_stock)
+        "actual_sla": actual_sla
     }
 
     # --- CREATE TABS ---
@@ -215,8 +246,6 @@ if df is not None and not df.empty:
         # B. Display Key Metrics
         st.markdown("### 🔮 Planning Engine")
 
-        difference = int(sim_safety_stock - actual_safety_stock)
-
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Avg Monthly Demand", f"{int(avg_demand)}")
         c2.metric("Optimal SLA (Cost-Based)", f"{actual_sla * 100:.1f}%")
@@ -224,8 +253,8 @@ if df is not None and not df.empty:
         c3.metric(
             label=f"Safety Stock ({sim_sla}%)",
             value=f"{int(sim_safety_stock)}",
-            delta=f"{difference} units" if difference != 0 else None,
-            delta_color="inverse"
+            delta="Includes Lead Time Risk",
+            delta_color="off"
         )
 
         c4.metric("Optimal Order (EOQ)", f"{int(eoq)}")
@@ -312,7 +341,7 @@ if df is not None and not df.empty:
         else:
             # Generate the Heatmap
             heatmap_fig = profit_optimizer.calculate_profit_scenarios(
-                avg_demand, std_dev, holding_cost, stockout_cost, unit_cost, selling_price
+                avg_demand, std_dev_demand, holding_cost, stockout_cost, unit_cost, selling_price
             )
             st.plotly_chart(heatmap_fig, use_container_width=True)
 
