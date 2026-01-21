@@ -4,13 +4,14 @@ import plotly.graph_objects as go
 from sqlalchemy.orm import Session
 from database_schema import engine, DemandLog
 from datetime import date
-from dotenv import load_dotenv  # <--- Loads .env file for Cloud DB
+from dotenv import load_dotenv
 
 # Import Custom Logic Modules
 import config
 import inventory_math
 import ai_brain
 import report_gen
+import forecast  # <--- NEW: Forecasting Module
 
 # --- LOAD SECRETS ---
 load_dotenv()
@@ -113,10 +114,11 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ About")
 st.sidebar.info(
     """
-    **Capacity Optimizer v2.3**
+    **Capacity Optimizer v2.4**
 
     🤖 AI Model: Gemini 1.5 Flash
     ☁️ Database: Neon PostgreSQL
+    🔮 Engine: Linear Regression
 
     *Built by Sandesh Hegde*
     """
@@ -141,21 +143,51 @@ else:
 # 2. VISUALIZE & ANALYZE
 if df is not None and not df.empty:
 
-    # A. Demand Chart
+    # A. Demand Chart & Forecasting
     st.subheader("📈 Inventory & Demand Trends")
+
+    # Toggle for Forecasting
+    col_chart_1, col_chart_2 = st.columns([3, 1])
+    with col_chart_2:
+        show_forecast = st.checkbox("🔮 Show AI Demand Forecast", value=True, key="forecast_toggle")
+
     fig = go.Figure()
+
+    # 1. Plot Historical Data (Solid Green Line)
     fig.add_trace(go.Scatter(
         x=df['date'], y=df['demand'],
-        mode='lines+markers', name='Demand History',
+        mode='lines+markers', name='Actual History',
         line=dict(color='#2ca02c', width=3)
     ))
+
+    # 2. Calculate & Plot Forecast (Dashed Blue Line)
+    if show_forecast:
+        forecast_df = forecast.generate_forecast(df)
+
+        if forecast_df is not None:
+            # Connect the last historical point to the first forecast point
+            last_hist_date = df['date'].max()
+            last_hist_val = df.loc[df['date'] == last_hist_date, 'demand'].values[0]
+
+            # Add a "Bridge" point so the lines connect nicely
+            bridge_df = pd.DataFrame({'date': [last_hist_date], 'demand': [last_hist_val]})
+            plot_forecast = pd.concat([bridge_df, forecast_df])
+
+            fig.add_trace(go.Scatter(
+                x=plot_forecast['date'], y=plot_forecast['demand'],
+                mode='lines+markers', name='Projected Forecast',
+                line=dict(color='#1f77b4', width=3, dash='dash')
+            ))
+        else:
+            st.warning("Not enough data to generate a forecast yet (Need 2+ points).")
+
     st.plotly_chart(fig, use_container_width=True)
 
     # B. Math Calculations
     avg_demand = df['demand'].mean()
     std_dev = df['demand'].std()
 
-    # ✅ FIX: Handle NaN when there is only 1 record (or 0 variance)
+    # Handle NaN for single record
     if pd.isna(std_dev):
         std_dev = 0.0
 
