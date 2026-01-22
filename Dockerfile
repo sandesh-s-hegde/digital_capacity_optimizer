@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 4. Copy the rest of your application code
 COPY . .
 
-# 5. The "Magic" Start Command
-# This runs the migration script FIRST, then starts the website.
-CMD sh -c "python migrate_csv_to_sql.py && streamlit run app.py --server.port $PORT --server.address 0.0.0.0"
+# 5. The Start Command
+# FIXED: Removed 'migrate_csv_to_sql.py'
+# We keep "sh -c" to ensure the $PORT variable works correctly on Render
+CMD sh -c "streamlit run app.py --server.port $PORT --server.address 0.0.0.0"
