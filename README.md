@@ -12,13 +12,29 @@
 
 ---
 
-## 📌 Overview
+## 🚀 Key Features
 
-The **Digital Capacity Optimizer** is a production-grade SaaS platform for Supply Chain Intelligence. It has evolved from a simple calculator into a **Multi-Tenant Inventory System** capable of managing hundreds of products simultaneously.
+### 📊 1. Intelligent Dashboard
+* **Multi-Product Support:** Track distinct SKUs ("Widget A", "Widget B") with isolated data.
+* **AI Forecasting:** Projects future demand using Linear Regression trend lines.
+* **Visual Analytics:** Interactive charts built with Plotly.
 
-It combines **Stochastic Math** (to handle supplier risk) with **Generative AI** (to explain the data), helping managers balance the fine line between "Stockouts" and "Overstocking."
+### 🚁 2. Executive Command Center
+* **"Watchtower" View:** Scans your entire database to flag products as **🟢 Normal**, **🔴 Surge Alert**, or **🟡 Low Velocity**.
+* **Instant Health Check:** See the status of your entire inventory at a glance.
 
-### 🖥️ The Executive Command Center
+### 🚢 3. Stochastic Risk Engine
+* **Lead Time Uncertainty:** Models "Supply Chain Chaos" (e.g., shipping delays) to calculate required Safety Stock.
+* **Service Level Planning:** Adjust your desired SLA (e.g., 95% vs 99%) and see the cost impact instantly.
+
+### 💰 4. Profit Optimizer
+* **Scenario Heatmaps:** Visualizes the "Sweet Spot" between Ordering Too Much (Holding Cost) vs. Too Little (Stockout Cost).
+* **Unit Economics:** Calculates profit margins based on manufacturing cost vs. retail price.
+
+### 🛠️ 5. Data Management Tools
+* **Bulk Importer:** Upload CSV files to ingest historical data in seconds.
+* **Factory Reset:** "Danger Zone" feature to wipe the database and reset ID counters for testing.
+* **CRUD Operations:** Add, View, and Delete individual records.
 
 ---
 
