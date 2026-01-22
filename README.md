@@ -1,51 +1,63 @@
 # 🧠 AI-Powered Digital Capacity Optimizer
 
-**Author:** Sandesh Hegde  
-**Version:** v2.3.0 (Cognitive Edition)  
-**License:** MIT  
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen) ![AI](https://img.shields.io/badge/AI-Gemini_Flash-blueviolet) ![Docker](https://img.shields.io/badge/docker-supported-blue)
+**Author:** Sandesh Hegde
+
+**Version:** v2.6.0 (Stochastic Edition)
+
+**License:** MIT
 
 ## 🚀 Live Demo
+
 **[Click here to launch the App](https://digital-capacity-optimizer.onrender.com/)** *(Note: Hosted on Render Free Tier. Please allow 30s for cold start.)*
 
 ---
 
 ## 📌 Overview
 
-The **Digital Capacity Optimizer** is a Full-Stack Supply Chain Intelligence platform. It goes beyond simple data tracking by integrating **Generative AI** to act as an automated supply chain analyst.
+The **Digital Capacity Optimizer** is a production-grade SaaS platform for Supply Chain Intelligence. It has evolved from a simple calculator into a **Multi-Tenant Inventory System** capable of managing hundreds of products simultaneously.
 
-The system connects a live **PostgreSQL** database to **Google's Gemini LLM**, allowing users to not only *see* their inventory levels but *understand* the strategic risks through natural language reports.
+It combines **Stochastic Math** (to handle supplier risk) with **Generative AI** (to explain the data), helping managers balance the fine line between "Stockouts" and "Overstocking."
 
-### 🖥️ The AI Dashboard
-![Dashboard UI](dashboard_ui.png)
+### 🖥️ The Executive Command Center
 
 ---
 
 ## 🏗️ Architecture
 
-The application follows a modern **Cognitive 3-Tier Architecture**:
+The application follows a **Micro-Module Architecture** to ensure scalability:
 
-1.  **Presentation:** Streamlit (UI) + Plotly (Charts)
-2.  **Intelligence:** Python Logic (EOQ Models) + **Gemini AI (Reasoning)**
-3.  **Data:** PostgreSQL (Production) / SQLite (Sandbox)
+1. **Presentation:** Streamlit (UI) + Plotly (Interactive Heatmaps)
+2. **Logic Layer:** * `db_manager.py`: CRUD operations & Bulk Import logic.
+* `inventory_math.py`: Stochastic Engine (Z-Scores, Normal Distribution).
+* `forecast.py`: Linear Regression Forecasting.
 
-**Data Flow:** `User Input` -> `SQL Database` -> `Python Math Engine` -> `LLM Context` -> `Strategic Report`
+
+3. **Intelligence:** Google Gemini 1.5 Flash (RAG - Chat with Data).
+4. **Data:** PostgreSQL (Production) with Multi-SKU support.
+
+**Data Flow:** `CSV/User Input` -> `DB Manager` -> `SQL` -> `Math Engine` -> `AI Context` -> `Strategic Report`
 
 ---
 
 ## 🎯 Key Features
 
-### 🧠 Cognitive Intelligence (New)
-- **📄 Executive PDF Reporting:** One-click generation of professional PDF summaries for stakeholder meetings.
-- **🛡️ AI Guardrails:** Strict negative constraints prevent the AI from answering off-topic questions or hallucinating math.
-- **Strategic Recommendations:** Translates math (StdDev, EOQ) into plain English advice.
+### 🧠 Cognitive Intelligence
 
-### 🏭 Core Supply Chain Ops
-- **🎛️ Scenario Simulation:** Interactive slider to test "What-If" scenarios (e.g., 95% vs 99% Service Levels) in real-time.
-- **🔌 Zero-Touch Loading:** Auto-connects to the cloud database on launch.
-- **📝 Read/Write System:** Log new orders directly via the sidebar form.
-- **📊 Interactive Charts:** Zoomable demand history and trend lines.
-- **💰 Financial Optimization:** Calculates Economic Order Quantity (EOQ) to minimize holding costs.
+* **🚁 Executive Command Center:** A "Watchtower" view that scans the entire database to flag products as **🟢 Normal**, **🔴 Surge Alert**, or **🟡 Low Velocity**.
+* **📄 Executive PDF Reporting:** One-click generation of professional summaries using AI to explain the "Why" behind the numbers.
+* **💬 Chat with Data:** Ask natural language questions like *"Why is safety stock so high for Widget A?"*
+
+### 🚢 Stochastic Risk Engine (New)
+
+* **⚡ Supplier Chaos Factor:** Models "Lead Time Variance" (e.g., shipping delays). The system calculates how much extra stock you need if your supplier is unreliable.
+* **📉 AI Demand Forecasting:** Uses Linear Regression to project demand trends 3 months into the future.
+* **💰 Profit Heatmaps:** Visualizes the exact "Sweet Spot" for order quantity based on unit economics.
+
+### 🏭 Core Operations
+
+* **📦 Multi-Product Support:** Track distinct SKUs ("Widget A", "Widget B") with isolated data streams.
+* **🚚 Bulk Import:** Drag-and-drop CSV upload to ingest historical data in seconds.
+* **🧨 Factory Reset:** "Danger Zone" tools to wipe data and reset ID counters for clean testing.
 
 ---
 
@@ -53,65 +65,67 @@ The application follows a modern **Cognitive 3-Tier Architecture**:
 
 The system utilizes a hybrid approach of **Deterministic Math** and **Probabilistic AI**:
 
-1.  **The Math:** Calculates the exact Safety Stock needed for a target Service Level (e.g., 99.1%) based on the Simulation Slider.
-2.  **The AI:** Analyzes the context (e.g., "Volatility is 10x higher than normal"), sanitizes the output, and compiles a downloadable PDF report.
+1. **The Math:** Uses the **Root Sum of Squares (RSS)** formula to combine Demand Uncertainty and Lead Time Uncertainty into a single Risk Metric.
+2. **The Optimization:** Solves the **Newsvendor Problem** to find the mathematically optimal order quantity that maximizes profit margins.
+3. **The AI:** Acts as the analyst, translating these complex deviations into actionable business advice.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **AI Model:** Google Gemini 2.0 Flash / 1.5 Flash
-- **Infrastructure:** Docker, Render (Cloud)
-- **Database:** PostgreSQL (Prod), SQLAlchemy ORM
-- **Frontend:** Streamlit, Plotly
-- **Reporting:** FPDF2 (PDF Generation)
-- **Language:** Python 3.11
+* **AI Model:** Google Gemini 1.5 Flash
+* **Database:** PostgreSQL (Neon DB), SQLAlchemy ORM
+* **Frontend:** Streamlit, Plotly Graph Objects
+* **Math Engine:** Numpy, Statistics (Pure Python)
+* **Reporting:** FPDF2
+* **Language:** Python 3.10+
 
 ---
 
 ## 🚀 Installation & Usage
 
 ### Prerequisites
+
 You need a [Google AI Studio API Key](https://aistudio.google.com/).
 
 ### Option A: Run Locally (Python)
+
 ```bash
 # 1. Clone the repository
-git clone [https://github.com/sandesh-s-hegde/digital_capacity_optimizer.git](https://github.com/sandesh-s-hegde/digital_capacity_optimizer.git)
+git clone https://github.com/sandesh-s-hegde/digital_capacity_optimizer.git
 cd digital_capacity_optimizer
 
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Set your AI Key (Windows PowerShell)
-$env:GEMINI_API_KEY="AIzaSy...YourKey"
+# 3. Set your API Key (Create a .env file)
+# GEMINI_API_KEY="AIzaSy..."
+# DATABASE_URL="postgresql://..."
 
 # 4. Launch the Dashboard
 streamlit run app.py
 
 ```
 
-### Option B: Run with Docker
+### Option B: Bulk Upload Format
 
-```bash
-# 1. Build the container
-docker build -t digital-capacity-optimizer .
+To import data via CSV, your file must have these headers:
 
-# 2. Run the container (passing the API key)
-docker run -e GEMINI_API_KEY="AIzaSy..." -p 8501:8501 digital-capacity-optimizer
-Access the app at http://localhost:8501
+```csv
+date,product_name,demand
+2024-01-01,Laptop Pro,120
+2024-02-01,Laptop Pro,145
+2024-03-01,Laptop Pro,130
+
 ```
-
-Access the app at `http://localhost:8501`
 
 ---
 
-
 ## 🔮 Roadmap
 
-| Phase          | Maturity Level | Key Capabilities | Tech Stack |
-|----------------| --- | --- | --- |
+| Phase | Maturity Level | Key Capabilities | Tech Stack |
+| --- | --- | --- | --- |
 | Phase 1 (Done) | Descriptive | Static Rule-Based Logic (EOQ) | Python, Pandas |
 | Phase 2 (Done) | Predictive | Dockerized Web App + SQL Database | PostgreSQL, Docker |
-| Phase 3 (Done) | Cognitive | "Chat with Data" (RAG) | Gemini API, Vector DBs |
-| Phase 4        | Autonomous | Self-Healing Supply Chain | Reinforcement Learning |
+| Phase 3 (Done) | Stochastic | **Risk Engine, Multi-SKU, Bulk Import** | Scipy, Numpy, Plotly |
+| Phase 4 | Autonomous | Self-Healing Supply Chain | Reinforcement Learning |
