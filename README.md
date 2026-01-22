@@ -127,5 +127,5 @@ date,product_name,demand
 | --- | --- | --- | --- |
 | Phase 1 (Done) | Descriptive | Static Rule-Based Logic (EOQ) | Python, Pandas |
 | Phase 2 (Done) | Predictive | Dockerized Web App + SQL Database | PostgreSQL, Docker |
-| Phase 3 (Done) | Stochastic | **Risk Engine, Multi-SKU, Bulk Import** | Scipy, Numpy, Plotly |
+| Phase 3 (Done) | Stochastic | **Risk Engine, Multi-SKU, Bulk Import** | **Numpy, Statistics, Plotly** |
 | Phase 4 | Autonomous | Self-Healing Supply Chain | Reinforcement Learning |
