@@ -19,7 +19,7 @@ load_dotenv()
 # --- CONFIGURATION ---
 st.set_page_config(
     page_title="Digital Capacity Optimizer",
-    page_icon="📦",  # <--- New Browser Tab Icon
+    page_icon="📦",  # <--- Browser Tab Icon
     layout="wide"
 )
 
@@ -105,12 +105,12 @@ sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 # --- SIDEBAR: STATUS & ABOUT ---
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 System Status: **Online** | v2.6.1")
+st.sidebar.caption("🟢 System Status: **Online** | v2.6.2")
 
 st.sidebar.markdown("### ℹ️ About")
 st.sidebar.info(
     """
-    **Capacity Optimizer v2.6.1**
+    **Capacity Optimizer v2.6.2**
 
     *Modules Active:*
     * 📊 Multi-SKU Dashboard
@@ -184,10 +184,16 @@ if df is not None and not df.empty:
     )
     eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
 
+    # --- METRICS BUNDLE (FIXED: Added 'sla' keys back) ---
     metrics = {
-        "avg_demand": int(avg_demand), "std_dev": int(std_dev_demand),
-        "lead_time": lead_time_months, "lead_time_risk": lead_time_volatility,
-        "eoq": int(eoq), "safety_stock": int(sim_safety_stock),
+        "avg_demand": int(avg_demand),
+        "std_dev": int(std_dev_demand),
+        "lead_time": lead_time_months,
+        "lead_time_risk": lead_time_volatility,
+        "eoq": int(eoq),
+        "safety_stock": int(sim_safety_stock),
+        "sla": sim_sla / 100.0,  # <--- FIXED CRASH
+        "actual_sla": actual_sla,  # <--- FIXED CRASH
         "product_name": selected_sku if selected_sku else "Data"
     }
 
@@ -280,4 +286,4 @@ if df is not None and not df.empty:
 
 # --- FOOTER ---
 st.markdown("---")
-st.caption("© 2026 Digital Capacity Inc. | v2.6.1")
+st.caption("© 2026 Digital Capacity Inc. | v2.6.2")
