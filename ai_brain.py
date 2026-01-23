@@ -50,13 +50,13 @@ def chat_with_data(user_query, chat_history, df, metrics):
         """
 
         # 4. SEND TO GOOGLE
+        # UPDATED: Using 'gemini-2.0-flash' which is available in your list
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-2.0-flash",
             system_instruction=system_instruction
         )
 
-        # Format history for Gemini (optional, but good for conversation flow)
-        # We simplify history to avoid token limits
+        # Format history for Gemini
         clean_history = []
         for msg in chat_history[-4:]:  # Keep only last 4 messages
             role = "user" if msg['role'] == 'user' else "model"
