@@ -16,7 +16,6 @@ def chat_with_data(user_query, chat_history, df, metrics):
         genai.configure(api_key=api_key)
 
         # 2. PREPARE DATA CONTEXT
-        # We summarize the data so the AI can "read" it efficiently
         if df is not None and not df.empty:
             # Get last 5 months of data to see the trend
             recent_data = df.tail(5).to_string(index=False)
@@ -35,7 +34,7 @@ def chat_with_data(user_query, chat_history, df, metrics):
         else:
             data_context = "No data available in the database yet."
 
-        # 3. BUILD THE SYSTEM PROMPT (THE RULES)
+        # 3. BUILD THE SYSTEM PROMPT
         system_instruction = f"""
         You are a Supply Chain expert analyzing inventory data.
 
@@ -50,9 +49,9 @@ def chat_with_data(user_query, chat_history, df, metrics):
         """
 
         # 4. SEND TO GOOGLE
-        # UPDATED: Using 'gemini-2.0-flash' which is available in your list
+        # FIX: Using 'gemini-flash-latest' points to the best stable model for your tier
         model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash",
+            model_name="gemini-flash-latest",
             system_instruction=system_instruction
         )
 

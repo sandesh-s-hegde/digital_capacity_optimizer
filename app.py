@@ -105,12 +105,12 @@ sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 # --- SIDEBAR: STATUS & ABOUT ---
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 System Status: **Online** | v2.6.2")
+st.sidebar.caption("🟢 System Status: **Online** | v2.6.3")
 
 st.sidebar.markdown("### ℹ️ About")
 st.sidebar.info(
     """
-    **Capacity Optimizer v2.6.2**
+    **Capacity Optimizer v2.6.3**
 
     *Modules Active:*
     * 📊 Multi-SKU Dashboard
@@ -184,7 +184,7 @@ if df is not None and not df.empty:
     )
     eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
 
-    # --- METRICS BUNDLE (FIXED: Added 'sla' keys back) ---
+    # --- METRICS BUNDLE ---
     metrics = {
         "avg_demand": int(avg_demand),
         "std_dev": int(std_dev_demand),
@@ -192,8 +192,8 @@ if df is not None and not df.empty:
         "lead_time_risk": lead_time_volatility,
         "eoq": int(eoq),
         "safety_stock": int(sim_safety_stock),
-        "sla": sim_sla / 100.0,  # <--- FIXED CRASH
-        "actual_sla": actual_sla,  # <--- FIXED CRASH
+        "sla": sim_sla / 100.0,
+        "actual_sla": actual_sla,
         "product_name": selected_sku if selected_sku else "Data"
     }
 
@@ -242,23 +242,42 @@ if df is not None and not df.empty:
                         st.download_button("⬇️ Download", pdf_bytes, f"report_{metrics['product_name']}.pdf",
                                            "application/pdf")
 
-            # AI Chat
+            # --- AI CHAT SECTION (SCROLLABLE UI) ---
             st.divider()
+            st.subheader("💬 AI Supply Chain Analyst")
+
+            # 1. Initialize Chat History
             if "messages" not in st.session_state: st.session_state.messages = []
 
-            for msg in st.session_state.messages:
-                st.chat_message(msg["role"]).markdown(msg["content"])
+            # 2. Create a SCROLLABLE CONTAINER
+            # This keeps messages in a 500px window so they don't push the input box down
+            chat_container = st.container(height=500, border=True)
 
+            # 3. Render Past Messages
+            with chat_container:
+                for msg in st.session_state.messages:
+                    st.chat_message(msg["role"]).markdown(msg["content"])
+
+            # 4. Chat Input (Fixed at bottom of section)
             if prompt := st.chat_input("Ask about this product..."):
+                # Add user message to state
                 st.session_state.messages.append({"role": "user", "content": prompt})
-                st.chat_message("user").markdown(prompt)
 
-                with st.spinner("Analyzing..."):
-                    history = [{"role": m["role"], "parts": [m["content"]]} for m in st.session_state.messages]
-                    response = ai_brain.chat_with_data(prompt, history, df, metrics)
+                # Display immediately
+                with chat_container:
+                    st.chat_message("user").markdown(prompt)
 
-                st.chat_message("assistant").markdown(response)
+                    with st.spinner("Analyzing..."):
+                        history = [{"role": m["role"], "parts": [m["content"]]} for m in st.session_state.messages]
+                        response = ai_brain.chat_with_data(prompt, history, df, metrics)
+
+                    st.chat_message("assistant").markdown(response)
+
+                # Add AI response to state
                 st.session_state.messages.append({"role": "assistant", "content": response})
+
+                # Rerun to clean up UI
+                st.rerun()
 
         with tab2:
             st.subheader("Profit Heatmap")
@@ -286,4 +305,4 @@ if df is not None and not df.empty:
 
 # --- FOOTER ---
 st.markdown("---")
-st.caption("© 2026 Digital Capacity Inc. | v2.6.2")
+st.caption("© 2026 Digital Capacity Inc. | v2.6.3")
