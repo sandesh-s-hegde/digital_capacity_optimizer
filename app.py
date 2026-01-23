@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 # Import Custom Logic Modules
 import config
-import db_manager  # Refactored Database Manager
+import db_manager
 import inventory_math
 import ai_brain
 import report_gen
@@ -19,9 +19,48 @@ load_dotenv()
 # --- CONFIGURATION ---
 st.set_page_config(
     page_title="Digital Capacity Optimizer",
-    page_icon="📦",  # <--- Browser Tab Icon
+    page_icon="📦",
     layout="wide"
 )
+
+
+# --- HELPER: REUSABLE CHAT INTERFACE ---
+def render_chat_ui(df, metrics, extra_context="", key="default_chat"):
+    """
+    Renders the Chat UI with specific context for the active tab.
+    """
+    st.divider()
+    st.subheader("💬 AI Analyst")
+
+    # 1. Initialize Chat History
+    if "messages" not in st.session_state: st.session_state.messages = []
+
+    # 2. Scrollable Container
+    chat_container = st.container(height=400, border=True)
+
+    with chat_container:
+        for msg in st.session_state.messages:
+            st.chat_message(msg["role"]).markdown(msg["content"])
+
+    # 3. Input Area (Fixed: Added unique 'key')
+    if prompt := st.chat_input("Ask a question...", key=key):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+        with chat_container:
+            st.chat_message("user").markdown(prompt)
+
+            with st.spinner("Analyzing..."):
+                # Combine General Metrics + Tab Specific Context
+                full_query = f"{prompt}\n\n[CONTEXT OVERRIDE: {extra_context}]"
+
+                history = [{"role": m["role"], "parts": [m["content"]]} for m in st.session_state.messages]
+                response = ai_brain.chat_with_data(full_query, history, df, metrics)
+
+            st.chat_message("assistant").markdown(response)
+
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.rerun()
+
 
 # --- SIDEBAR: CONTROLS ---
 st.sidebar.header("⚙️ Data Source")
@@ -33,7 +72,6 @@ st.sidebar.markdown("---")
 selected_sku = None
 
 if source_option == "🔌 Live Database":
-
     # A. SINGLE ENTRY
     st.sidebar.subheader("📝 Log Inventory")
     with st.sidebar.expander("Add Single Record", expanded=False):
@@ -56,14 +94,11 @@ if source_option == "🔌 Live Database":
             if st.button("🚀 Import to Database"):
                 try:
                     bulk_df = pd.read_csv(upload_csv)
-                    # Clean headers
                     bulk_df.columns = bulk_df.columns.str.strip().str.lower().str.replace(' ', '_')
-
                     if {'date', 'product_name', 'demand'}.issubset(bulk_df.columns):
                         success, msg = db_manager.bulk_import_csv(bulk_df)
                         if success:
-                            st.success(msg)
-                            st.rerun()
+                            st.success(msg); st.rerun()
                         else:
                             st.error(f"Import Failed: {msg}")
                     else:
@@ -75,25 +110,20 @@ if source_option == "🔌 Live Database":
     st.sidebar.markdown("---")
     st.sidebar.header("🔍 Filter Dashboard")
     all_products = db_manager.get_unique_products()
-
     if all_products:
         selected_sku = st.sidebar.selectbox("Select Product:", all_products)
     else:
         st.sidebar.caption("No data yet.")
 
-    # D. DANGER ZONE (RESET)
+    # D. DANGER ZONE
     st.sidebar.markdown("---")
-    st.sidebar.header("⚠️ Danger Zone")
-    if st.sidebar.button("🧨 Factory Reset (Wipe All Data)"):
-        if db_manager.reset_database():
-            st.sidebar.success("Database wiped! IDs reset to 1.")
-            st.rerun()
-        else:
-            st.sidebar.error("Reset failed.")
+    with st.sidebar.expander("⚠️ Danger Zone"):
+        if st.button("🧨 Factory Reset"):
+            if db_manager.reset_database(): st.success("Reset Complete"); st.rerun()
 
 st.sidebar.markdown("---")
 
-# 2. PARAMETERS (Financials & Risk)
+# 2. PARAMETERS
 st.sidebar.header("🔧 Settings")
 holding_cost = st.sidebar.number_input("Holding Cost ($)", value=config.HOLDING_COST)
 stockout_cost = st.sidebar.number_input("Stockout Cost ($)", value=config.STOCKOUT_COST)
@@ -103,32 +133,17 @@ lead_time_months = st.sidebar.slider("Avg Lead Time (Months)", 0.5, 6.0, 1.0, 0.
 lead_time_volatility = st.sidebar.slider("Lead Time Variance", 0.0, 2.0, 0.0, 0.1)
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
-# --- SIDEBAR: STATUS & ABOUT ---
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 System Status: **Online** | v2.6.3")
-
-st.sidebar.markdown("### ℹ️ About")
-st.sidebar.info(
-    """
-    **Capacity Optimizer v2.6.3**
-
-    *Modules Active:*
-    * 📊 Multi-SKU Dashboard
-    * 🔮 AI Forecasting
-    * 🚢 Risk Engine
-    * 💰 Profit Heatmap
-    """
-)
+st.sidebar.caption("🟢 System Status: **Online** | v2.6.5")
 
 # --- MAIN PAGE ---
 st.title("📦 Digital Capacity Optimizer")
 
-# 1. LOAD DATA
+# LOAD DATA
 df = None
 if source_option == "🔌 Live Database":
     df = db_manager.load_data(selected_sku)
 else:
-    # Sandbox Mode
     st.info("Sandbox Mode: Upload a CSV to simulate.")
     uploaded_file = st.file_uploader("Upload CSV", type=["csv"], key="sandbox")
     if uploaded_file:
@@ -136,64 +151,43 @@ else:
         df.columns = df.columns.str.strip().str.lower()
         if 'date' in df.columns: df['date'] = pd.to_datetime(df['date'])
 
-# 2. EXECUTIVE SUMMARY (COMMAND CENTER)
+# EXECUTIVE SUMMARY
 if source_option == "🔌 Live Database":
-    st.markdown("### 🚁 Executive Command Center")
-    full_df = db_manager.load_data(None)
-
-    if full_df is not None and not full_df.empty:
-        summary_data = []
-        for p in full_df['product_name'].unique():
-            p_data = full_df[full_df['product_name'] == p]
-            if not p_data.empty:
-                last = p_data.iloc[-1]
-                avg = p_data['demand'].mean()
-
-                status = "🟢 Normal"
-                if last['demand'] > avg * 1.5:
-                    status = "🔴 Surge Alert"
-                elif last['demand'] < avg * 0.5:
-                    status = "🟡 Low Velocity"
-
-                summary_data.append({
-                    "Product": p, "Last Update": last['date'],
-                    "Latest": int(last['demand']), "Status": status
-                })
-
-        summ_df = pd.DataFrame(summary_data)
-        if not summ_df.empty:
-            st.dataframe(
-                summ_df.style.map(lambda v: 'color: red' if 'Surge' in v else 'color: green', subset=['Status']),
-                use_container_width=True, hide_index=True
-            )
-    else:
-        st.info("Database is empty. Add data via sidebar.")
-
+    with st.expander("🚁 Executive Command Center", expanded=False):
+        full_df = db_manager.load_data(None)
+        if full_df is not None and not full_df.empty:
+            summary_data = []
+            for p in full_df['product_name'].unique():
+                p_data = full_df[full_df['product_name'] == p]
+                if not p_data.empty:
+                    last = p_data.iloc[-1]
+                    avg = p_data['demand'].mean()
+                    status = "🟢 Normal"
+                    if last['demand'] > avg * 1.5:
+                        status = "🔴 Surge Alert"
+                    elif last['demand'] < avg * 0.5:
+                        status = "🟡 Low Velocity"
+                    summary_data.append({"Product": p, "Latest": int(last['demand']), "Status": status})
+            st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
     st.divider()
 
-# 3. ANALYSIS TABS
+# ANALYSIS TABS
 if df is not None and not df.empty:
 
-    # --- CALCULATIONS ---
+    # METRICS
     avg_demand = df['demand'].mean()
     std_dev_demand = df['demand'].std() if len(df) > 1 else 0
     actual_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
-
     sim_safety_stock = inventory_math.calculate_advanced_safety_stock(
         avg_demand, std_dev_demand, lead_time_months, lead_time_volatility, sim_sla / 100.0
     )
     eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
 
-    # --- METRICS BUNDLE ---
     metrics = {
-        "avg_demand": int(avg_demand),
-        "std_dev": int(std_dev_demand),
-        "lead_time": lead_time_months,
-        "lead_time_risk": lead_time_volatility,
-        "eoq": int(eoq),
-        "safety_stock": int(sim_safety_stock),
-        "sla": sim_sla / 100.0,
-        "actual_sla": actual_sla,
+        "avg_demand": int(avg_demand), "std_dev": int(std_dev_demand),
+        "lead_time": lead_time_months, "lead_time_risk": lead_time_volatility,
+        "eoq": int(eoq), "safety_stock": int(sim_safety_stock),
+        "sla": sim_sla / 100.0, "actual_sla": actual_sla,
         "product_name": selected_sku if selected_sku else "Data"
     }
 
@@ -202,6 +196,7 @@ if df is not None and not df.empty:
     else:
         tab1, tab2 = st.tabs(["📊 Dashboard", "💰 Profit Optimizer"])
 
+        # --- TAB 1: DASHBOARD ---
         with tab1:
             st.subheader(f"Analysis: {metrics['product_name']}")
 
@@ -209,19 +204,16 @@ if df is not None and not df.empty:
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=df['date'], y=df['demand'], mode='lines+markers', name='Actual',
                                      line=dict(color='#2ca02c', width=3)))
-
             if st.checkbox("Show Forecast", value=True):
                 f_df = forecast.generate_forecast(df)
                 if f_df is not None:
-                    # Bridge the gap visually
                     last_pt = pd.DataFrame({'date': [df['date'].max()], 'demand': [df.iloc[-1]['demand']]})
                     fig.add_trace(
                         go.Scatter(x=pd.concat([last_pt, f_df])['date'], y=pd.concat([last_pt, f_df])['demand'],
                                    mode='lines+markers', name='Forecast', line=dict(dash='dash', color='#1f77b4')))
-
             st.plotly_chart(fig, use_container_width=True)
 
-            # Metrics
+            # KPI Metrics
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Avg Demand", f"{int(avg_demand)}")
             c2.metric("Optimal SLA", f"{actual_sla * 100:.1f}%")
@@ -229,80 +221,51 @@ if df is not None and not df.empty:
             c4.metric("EOQ Order", f"{int(eoq)}")
 
             # PDF Report
-            st.divider()
-            col_rep_1, col_rep_2 = st.columns([3, 1])
-            with col_rep_1:
-                st.caption("Generate AI Executive Summary PDF.")
-            with col_rep_2:
-                if st.button("📄 Generate Report"):
-                    with st.spinner("AI Writing..."):
-                        summary = ai_brain.chat_with_data(f"Write a 4-sentence summary for {metrics['product_name']}",
-                                                          [], df, metrics)
-                        pdf_bytes = report_gen.generate_pdf(metrics, summary)
-                        st.download_button("⬇️ Download", pdf_bytes, f"report_{metrics['product_name']}.pdf",
-                                           "application/pdf")
+            if st.button("📄 Generate PDF Report"):
+                with st.spinner("Writing..."):
+                    summary = ai_brain.chat_with_data(f"Summary for {metrics['product_name']}", [], df, metrics)
+                    pdf_bytes = report_gen.generate_pdf(metrics, summary)
+                    st.download_button("⬇️ Download PDF", pdf_bytes, f"report.pdf", "application/pdf")
 
-            # --- AI CHAT SECTION (SCROLLABLE UI) ---
-            st.divider()
-            st.subheader("💬 AI Supply Chain Analyst")
+            # --- AI CHAT (DASHBOARD CONTEXT) ---
+            # Added key="dashboard_chat"
+            render_chat_ui(df, metrics, extra_context="Focus on inventory levels and forecasting.",
+                           key="dashboard_chat")
 
-            # 1. Initialize Chat History
-            if "messages" not in st.session_state: st.session_state.messages = []
-
-            # 2. Create a SCROLLABLE CONTAINER
-            # This keeps messages in a 500px window so they don't push the input box down
-            chat_container = st.container(height=500, border=True)
-
-            # 3. Render Past Messages
-            with chat_container:
-                for msg in st.session_state.messages:
-                    st.chat_message(msg["role"]).markdown(msg["content"])
-
-            # 4. Chat Input (Fixed at bottom of section)
-            if prompt := st.chat_input("Ask about this product..."):
-                # Add user message to state
-                st.session_state.messages.append({"role": "user", "content": prompt})
-
-                # Display immediately
-                with chat_container:
-                    st.chat_message("user").markdown(prompt)
-
-                    with st.spinner("Analyzing..."):
-                        history = [{"role": m["role"], "parts": [m["content"]]} for m in st.session_state.messages]
-                        response = ai_brain.chat_with_data(prompt, history, df, metrics)
-
-                    st.chat_message("assistant").markdown(response)
-
-                # Add AI response to state
-                st.session_state.messages.append({"role": "assistant", "content": response})
-
-                # Rerun to clean up UI
-                st.rerun()
-
+        # --- TAB 2: PROFIT OPTIMIZER ---
         with tab2:
             st.subheader("Profit Heatmap")
-            uc = st.number_input("Unit Cost", 50.0)
-            sp = st.number_input("Selling Price", 85.0)
+
+            # Inputs
+            c_input1, c_input2 = st.columns(2)
+            uc = c_input1.number_input("Unit Cost ($)", 50.0)
+            sp = c_input2.number_input("Selling Price ($)", 85.0)
+
             if sp > uc:
+                # 1. Show Heatmap
                 st.plotly_chart(profit_optimizer.calculate_profit_scenarios(
                     avg_demand, std_dev_demand, holding_cost, stockout_cost, uc, sp
                 ), use_container_width=True)
 
-    # DELETE SECTION
-    if source_option == "🔌 Live Database":
-        st.divider()
-        with st.expander("🗑️ Manage Records (Delete Data)"):
-            if not df.empty:
-                st.dataframe(df[['id', 'date', 'product_name', 'demand']].sort_values('date', ascending=False),
-                             use_container_width=True, hide_index=True)
-                del_id = st.number_input("ID to Delete", min_value=1, step=1)
-                if st.button("Delete Record"):
-                    if db_manager.delete_record(del_id):
-                        st.success("Deleted!")
-                        st.rerun()
+                # 2. Build Profit Context for AI
+                margin = sp - uc
+                margin_pct = (margin / sp) * 100
+                profit_context = f"""
+                PROFIT SCENARIO ACTIVE:
+                - Unit Cost: ${uc}
+                - Selling Price: ${sp}
+                - Profit Margin: ${margin} ({margin_pct:.1f}%)
+                - The user is looking at a heatmap showing profit vs risk.
+                - Higher Service Levels increase costs but capture more revenue.
+                """
+
+                # --- AI CHAT (PROFIT CONTEXT) ---
+                st.info("💡 Tip: Ask the AI to summarize this heatmap or find the break-even point.")
+                # Added key="profit_chat"
+                render_chat_ui(df, metrics, extra_context=profit_context, key="profit_chat")
             else:
-                st.info("No records to delete.")
+                st.error("Selling Price must be higher than Unit Cost.")
 
 # --- FOOTER ---
 st.markdown("---")
-st.caption("© 2026 Digital Capacity Inc. | v2.6.3")
+st.caption("© 2026 Digital Capacity Inc. | v2.6.5")
