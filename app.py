@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 # Import Custom Logic Modules
 import config
-import db_manager  # Refactored Manager
+import db_manager  # Refactored Database Manager
 import inventory_math
 import ai_brain
 import report_gen
@@ -17,7 +17,11 @@ import profit_optimizer
 load_dotenv()
 
 # --- CONFIGURATION ---
-st.set_page_config(page_title="Digital Capacity Optimizer", layout="wide")
+st.set_page_config(
+    page_title="Digital Capacity Optimizer",
+    page_icon="📦",  # <--- New Browser Tab Icon
+    layout="wide"
+)
 
 # --- SIDEBAR: CONTROLS ---
 st.sidebar.header("⚙️ Data Source")
@@ -99,15 +103,20 @@ lead_time_months = st.sidebar.slider("Avg Lead Time (Months)", 0.5, 6.0, 1.0, 0.
 lead_time_volatility = st.sidebar.slider("Lead Time Variance", 0.0, 2.0, 0.0, 0.1)
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
-# --- SIDEBAR: ABOUT SECTION ---
+# --- SIDEBAR: STATUS & ABOUT ---
 st.sidebar.markdown("---")
+st.sidebar.caption("🟢 System Status: **Online** | v2.6.1")
+
 st.sidebar.markdown("### ℹ️ About")
 st.sidebar.info(
     """
-    **Capacity Optimizer v2.6**
+    **Capacity Optimizer v2.6.1**
 
-    *Current Build:* Beta
-    *Modules:* Multi-SKU, Risk Engine, Profit AI
+    *Modules Active:*
+    * 📊 Multi-SKU Dashboard
+    * 🔮 AI Forecasting
+    * 🚢 Risk Engine
+    * 💰 Profit Heatmap
     """
 )
 
@@ -127,7 +136,7 @@ else:
         df.columns = df.columns.str.strip().str.lower()
         if 'date' in df.columns: df['date'] = pd.to_datetime(df['date'])
 
-# 2. EXECUTIVE SUMMARY
+# 2. EXECUTIVE SUMMARY (COMMAND CENTER)
 if source_option == "🔌 Live Database":
     st.markdown("### 🚁 Executive Command Center")
     full_df = db_manager.load_data(None)
@@ -136,19 +145,20 @@ if source_option == "🔌 Live Database":
         summary_data = []
         for p in full_df['product_name'].unique():
             p_data = full_df[full_df['product_name'] == p]
-            last = p_data.iloc[-1]
-            avg = p_data['demand'].mean()
+            if not p_data.empty:
+                last = p_data.iloc[-1]
+                avg = p_data['demand'].mean()
 
-            status = "🟢 Normal"
-            if last['demand'] > avg * 1.5:
-                status = "🔴 Surge Alert"
-            elif last['demand'] < avg * 0.5:
-                status = "🟡 Low Velocity"
+                status = "🟢 Normal"
+                if last['demand'] > avg * 1.5:
+                    status = "🔴 Surge Alert"
+                elif last['demand'] < avg * 0.5:
+                    status = "🟡 Low Velocity"
 
-            summary_data.append({
-                "Product": p, "Last Update": last['date'],
-                "Latest": int(last['demand']), "Status": status
-            })
+                summary_data.append({
+                    "Product": p, "Last Update": last['date'],
+                    "Latest": int(last['demand']), "Status": status
+                })
 
         summ_df = pd.DataFrame(summary_data)
         if not summ_df.empty:
@@ -156,6 +166,9 @@ if source_option == "🔌 Live Database":
                 summ_df.style.map(lambda v: 'color: red' if 'Surge' in v else 'color: green', subset=['Status']),
                 use_container_width=True, hide_index=True
             )
+    else:
+        st.info("Database is empty. Add data via sidebar.")
+
     st.divider()
 
 # 3. ANALYSIS TABS
@@ -209,6 +222,20 @@ if df is not None and not df.empty:
             c3.metric("Safety Stock", f"{int(sim_safety_stock)}", "Risk Adjusted")
             c4.metric("EOQ Order", f"{int(eoq)}")
 
+            # PDF Report
+            st.divider()
+            col_rep_1, col_rep_2 = st.columns([3, 1])
+            with col_rep_1:
+                st.caption("Generate AI Executive Summary PDF.")
+            with col_rep_2:
+                if st.button("📄 Generate Report"):
+                    with st.spinner("AI Writing..."):
+                        summary = ai_brain.chat_with_data(f"Write a 4-sentence summary for {metrics['product_name']}",
+                                                          [], df, metrics)
+                        pdf_bytes = report_gen.generate_pdf(metrics, summary)
+                        st.download_button("⬇️ Download", pdf_bytes, f"report_{metrics['product_name']}.pdf",
+                                           "application/pdf")
+
             # AI Chat
             st.divider()
             if "messages" not in st.session_state: st.session_state.messages = []
@@ -239,15 +266,18 @@ if df is not None and not df.empty:
     # DELETE SECTION
     if source_option == "🔌 Live Database":
         st.divider()
-        with st.expander("🗑️ Manage Records"):
-            st.dataframe(df[['id', 'date', 'product_name', 'demand']].sort_values('date', ascending=False),
-                         use_container_width=True, hide_index=True)
-            del_id = st.number_input("ID to Delete", min_value=1, step=1)
-            if st.button("Delete"):
-                if db_manager.delete_record(del_id):
-                    st.success("Deleted!")
-                    st.rerun()
+        with st.expander("🗑️ Manage Records (Delete Data)"):
+            if not df.empty:
+                st.dataframe(df[['id', 'date', 'product_name', 'demand']].sort_values('date', ascending=False),
+                             use_container_width=True, hide_index=True)
+                del_id = st.number_input("ID to Delete", min_value=1, step=1)
+                if st.button("Delete Record"):
+                    if db_manager.delete_record(del_id):
+                        st.success("Deleted!")
+                        st.rerun()
+            else:
+                st.info("No records to delete.")
 
 # --- FOOTER ---
 st.markdown("---")
-st.caption("© 2026 Digital Capacity Inc. | v2.6 Beta")
+st.caption("© 2026 Digital Capacity Inc. | v2.6.1")
