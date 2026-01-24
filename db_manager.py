@@ -1,105 +1,163 @@
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 import pandas as pd
-from sqlalchemy.orm import Session
-from sqlalchemy import text
-from database_schema import engine, DemandLog
-import config
+from datetime import datetime
 
 
-def load_data(selected_product=None):
-    """Fetches records, optionally filtering by Product."""
+# --- DATABASE CONNECTION ---
+def get_db_connection():
+    """Establishes a connection to the PostgreSQL database."""
     try:
-        if selected_product:
-            # Use parametrized query for safety
-            query = text("SELECT * FROM demand_logs_v2 WHERE product_name = :p ORDER BY date ASC")
-            df = pd.read_sql(query, engine, params={"p": selected_product})
-        else:
-            query = text("SELECT * FROM demand_logs_v2 ORDER BY date ASC")
-            df = pd.read_sql(query, engine)
-
-        if not df.empty:
-            df['date'] = pd.to_datetime(df['date'])
-        return df
+        url = os.getenv('DATABASE_URL')
+        if not url:
+            return None
+        conn = psycopg2.connect(url)
+        return conn
     except Exception as e:
-        print(f"DB Load Error: {e}")
+        print(f"❌ DB Connection Error: {e}")
         return None
 
 
-def get_unique_products():
-    """Fetches unique product names for the dropdown."""
-    try:
-        query = text("SELECT DISTINCT product_name FROM demand_logs_v2 ORDER BY product_name")
-        df = pd.read_sql(query, engine)
-        return df['product_name'].tolist() if not df.empty else []
-    except:
-        return []
+# --- LOAD DATA ---
+def load_data(product_name=None):
+    """
+    Loads inventory data.
+    If product_name is provided, filters by that product.
+    Returns a DataFrame.
+    """
+    conn = get_db_connection()
+    if not conn:
+        return pd.DataFrame()
 
-
-def add_record(log_date, product_name, demand_qty):
-    """Adds a single record to the database."""
     try:
-        with Session(engine) as session:
-            new_log = DemandLog(
-                date=log_date,
-                product_name=product_name,
-                demand=demand_qty,
-                region="Global",
-                unit_price=config.HOLDING_COST
-            )
-            session.add(new_log)
-            session.commit()
-            return True
+        query = "SELECT * FROM inventory"
+        params = ()
+
+        if product_name:
+            query += " WHERE product_name = %s"
+            params = (product_name,)
+
+        # Order by date so charts look right
+        query += " ORDER BY date ASC;"
+
+        df = pd.read_sql(query, conn, params=params)
+
+        # Ensure date column is actual datetime objects
+        if not df.empty and 'date' in df.columns:
+            df['date'] = pd.to_datetime(df['date'])
+
+        return df
     except Exception as e:
-        print(f"Add Error: {e}")
+        print(f"❌ Load Error: {e}")
+        return pd.DataFrame()
+    finally:
+        conn.close()
+
+
+# --- ADD SINGLE RECORD ---
+def add_record(date_val, product, demand):
+    """Inserts a single transaction into the database."""
+    conn = get_db_connection()
+    if not conn:
         return False
 
-
-def delete_record(record_id):
-    """Deletes a record by its unique ID."""
     try:
-        with Session(engine) as session:
-            record = session.get(DemandLog, int(record_id))
-            if record:
-                session.delete(record)
-                session.commit()
-                return True
-            else:
-                return False
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO inventory (date, product_name, demand) VALUES (%s, %s, %s)",
+            (date_val, product, demand)
+        )
+        conn.commit()
+        cur.close()
+        return True
     except Exception as e:
-        print(f"Delete Error: {e}")
+        print(f"❌ Add Error: {e}")
         return False
+    finally:
+        conn.close()
 
 
+# --- BULK IMPORT ---
 def bulk_import_csv(df):
     """
-    Takes a Pandas DataFrame and bulk inserts it.
+    Efficiently uploads a pandas DataFrame to the database.
+    Expected columns: date, product_name, demand
     """
+    conn = get_db_connection()
+    if not conn:
+        return False, "No Database Connection"
+
     try:
-        with Session(engine) as session:
-            for index, row in df.iterrows():
-                new_log = DemandLog(
-                    date=pd.to_datetime(row['date']),
-                    product_name=row['product_name'],
-                    demand=int(row['demand']),
-                    region="Global",
-                    unit_price=config.HOLDING_COST
-                )
-                session.add(new_log)
-            session.commit()
-            return True, f"Successfully imported {len(df)} records."
+        cur = conn.cursor()
+        # Convert DataFrame to list of tuples for fast insertion
+        data_tuples = [tuple(x) for x in df[['date', 'product_name', 'demand']].to_numpy()]
+
+        query = "INSERT INTO inventory (date, product_name, demand) VALUES (%s, %s, %s)"
+        cur.executemany(query, data_tuples)
+
+        conn.commit()
+        cur.close()
+        return True, f"Successfully imported {len(df)} records."
     except Exception as e:
         return False, str(e)
+    finally:
+        conn.close()
 
 
-def reset_database():
-    """
-    WARNING: Deletes ALL data and resets ID counter to 1.
-    """
+# --- GET UNIQUE PRODUCTS ---
+def get_unique_products():
+    """Returns a list of unique product names for the dropdown."""
+    conn = get_db_connection()
+    if not conn:
+        return []
+
     try:
-        with Session(engine) as session:
-            # TRUNCATE is faster than DELETE and resets the identity column
-            session.execute(text("TRUNCATE TABLE demand_logs_v2 RESTART IDENTITY;"))
-            session.commit()
-            return True
+        cur = conn.cursor()
+        cur.execute("SELECT DISTINCT product_name FROM inventory ORDER BY product_name;")
+        rows = cur.fetchall()
+        cur.close()
+        return [row[0] for row in rows]
     except Exception as e:
-        print(f"Reset Failed: {e}")
+        print(f"❌ Filter Error: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+# --- RESET DATABASE (DANGER) ---
+def reset_database():
+    """Wipes all data. Used for the 'Factory Reset' button."""
+    conn = get_db_connection()
+    if not conn:
         return False
+
+    try:
+        cur = conn.cursor()
+        cur.execute("TRUNCATE TABLE inventory RESTART IDENTITY;")
+        conn.commit()
+        cur.close()
+        return True
+    except Exception as e:
+        print(f"❌ Reset Error: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+# --- DELETE SPECIFIC RECORD ---
+def delete_record(record_id):
+    """Deletes a specific record by its unique ID (for fixing typos)."""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM inventory WHERE id = %s;", (record_id,))
+            conn.commit()
+            cursor.close()
+            return True, "Record deleted."
+        except Exception as e:
+            return False, str(e)
+        finally:
+            conn.close()
+    return False, "Connection failed."

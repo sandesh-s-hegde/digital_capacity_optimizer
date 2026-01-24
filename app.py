@@ -85,7 +85,18 @@ if source_option == "🔌 Live Database":
                     st.success("Saved!")
                     st.rerun()
 
-    # B. BULK UPLOAD
+    # B. DELETE RECORD (NEW FEATURE)
+    with st.sidebar.expander("🗑️ Delete Record by ID"):
+        del_id = st.number_input("Record ID", min_value=1, step=1)
+        if st.button("Delete ID"):
+            success, msg = db_manager.delete_record(del_id)
+            if success:
+                st.success(f"ID {del_id} Deleted!")
+                st.rerun()
+            else:
+                st.error(msg)
+
+    # C. BULK UPLOAD
     with st.sidebar.expander("📂 Bulk Upload (CSV)"):
         st.info("Columns needed: date, product_name, demand")
         upload_csv = st.file_uploader("Upload History", type=["csv"])
@@ -106,7 +117,7 @@ if source_option == "🔌 Live Database":
                 except Exception as e:
                     st.error(f"File Error: {e}")
 
-    # C. FILTER
+    # D. FILTER
     st.sidebar.markdown("---")
     st.sidebar.header("🔍 Filter Dashboard")
     all_products = db_manager.get_unique_products()
@@ -115,7 +126,7 @@ if source_option == "🔌 Live Database":
     else:
         st.sidebar.caption("No data yet.")
 
-    # D. DANGER ZONE
+    # E. DANGER ZONE
     st.sidebar.markdown("---")
     with st.sidebar.expander("⚠️ Danger Zone"):
         if st.button("🧨 Factory Reset"):
@@ -134,7 +145,7 @@ lead_time_volatility = st.sidebar.slider("Lead Time Variance", 0.0, 2.0, 0.0, 0.
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 System Status: **Online** | v2.7.1")
+st.sidebar.caption("🟢 System Status: **Online** | v2.7.2")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.markdown("### ℹ️ About")
@@ -296,6 +307,11 @@ if df is not None and not df.empty:
             else:
                 st.error("Selling Price must be higher than Unit Cost.")
 
-# --- FOOTER ---
+# --- FOOTER & RAW DATA INSPECTOR ---
 st.markdown("---")
 st.caption("© 2026 Digital Capacity Inc. | v2.7.0")
+
+# Optional: View Raw Data to find IDs for deletion
+if source_option == "🔌 Live Database" and df is not None:
+    with st.expander("🔍 View Raw Database (Find IDs for Deletion here)"):
+        st.dataframe(df, use_container_width=True)
