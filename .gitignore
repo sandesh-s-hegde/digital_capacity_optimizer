@@ -10,3 +10,9 @@ setup.cfg
 
 # Secrets (NEVER commit these)
 .env
+
+# Local Data Generation Tools
+generate_academic_data.py
+seed_data.py
+make_csv.py
+*.csv
