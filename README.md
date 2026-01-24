@@ -2,7 +2,7 @@
 
 **Author:** Sandesh Hegde
 
-**Version:** v2.6.0 (Stochastic Edition)
+**Version:** v2.7.0 (Stochastic Edition)
 
 **License:** MIT
 
@@ -44,10 +44,8 @@ The application follows a **Micro-Module Architecture** to ensure scalability:
 
 1. **Presentation:** Streamlit (UI) + Plotly (Interactive Heatmaps)
 2. **Logic Layer:** * `db_manager.py`: CRUD operations & Bulk Import logic.
-* `inventory_math.py`: Stochastic Engine (Z-Scores, Normal Distribution).
-* `forecast.py`: Linear Regression Forecasting.
-
-
+   * `inventory_math.py`: Stochastic Engine (Z-Scores, Normal Distribution).
+   * `forecast.py`: Linear Regression Forecasting.
 3. **Intelligence:** Google Gemini 1.5 Flash (RAG - Chat with Data).
 4. **Data:** PostgreSQL (Production) with Multi-SKU support.
 
@@ -77,13 +75,23 @@ The application follows a **Micro-Module Architecture** to ensure scalability:
 
 ---
 
-## 📊 How It Works
+## 🧠 How It Works (The Math)
 
-The system utilizes a hybrid approach of **Deterministic Math** and **Probabilistic AI**:
+This is not a black-box AI. The optimization engine is built on standard Operations Research principles:
 
-1. **The Math:** Uses the **Root Sum of Squares (RSS)** formula to combine Demand Uncertainty and Lead Time Uncertainty into a single Risk Metric.
-2. **The Optimization:** Solves the **Newsvendor Problem** to find the mathematically optimal order quantity that maximizes profit margins.
-3. **The AI:** Acts as the analyst, translating these complex deviations into actionable business advice.
+1.  **Newsvendor Model (Critical Ratio)**
+    * Applies the **Single-Period Newsvendor Model** to determine the optimal service level.
+    * *Formula:* `Critical Ratio = Cu / (Cu + Co)`
+    * *Why:* Balances the cost of overstocking (Holding Cost) vs. the cost of understocking (Stockout Cost).
+
+2.  **Stochastic Safety Stock**
+    * Uses a **Root Sum of Squares (RSS)** approach to account for two distinct types of uncertainty:
+        * **Demand Volatility:** Customer orders fluctuating month-to-month.
+        * **Supply Chain Risk:** Supplier lead time variability (e.g., shipping delays).
+    * *Result:* A mathematically robust buffer that protects service levels without bloating inventory.
+
+3.  **Economic Order Quantity (EOQ)**
+    * Calculates the optimal batch size to minimize total annual holding and ordering costs.
 
 ---
 
