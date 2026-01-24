@@ -42,7 +42,7 @@ def render_chat_ui(df, metrics, extra_context="", key="default_chat"):
         for msg in st.session_state.messages:
             st.chat_message(msg["role"]).markdown(msg["content"])
 
-    # 3. Input Area (Fixed: Added unique 'key')
+    # 3. Input Area (Unique key ensures no conflict between tabs)
     if prompt := st.chat_input("Ask a question...", key=key):
         st.session_state.messages.append({"role": "user", "content": prompt})
 
@@ -145,7 +145,7 @@ lead_time_volatility = st.sidebar.slider("Lead Time Variance", 0.0, 2.0, 0.0, 0.
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 System Status: **Online** | v2.7.2")
+st.sidebar.caption("🟢 System Status: **Online** | v2.7.3")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.markdown("### ℹ️ About")
@@ -232,7 +232,7 @@ if df is not None and not df.empty:
             if st.checkbox("Show Forecast", value=True):
                 f_df = forecast.generate_forecast(df)
                 if f_df is not None:
-                    # Capture forecast for AI
+                    # Capture forecast for AI context
                     forecast_text = f"""
                     \n[SYSTEM GENERATED FORECAST DATA]
                     The linear regression projects the following future demand:
@@ -289,20 +289,28 @@ if df is not None and not df.empty:
                     avg_demand, std_dev_demand, holding_cost, stockout_cost, uc, sp
                 ), use_container_width=True)
 
-                # 2. Build Profit Context for AI
+                # 2. INTELLIGENCE LAYER: Calculate the Data for the AI
                 margin = sp - uc
                 margin_pct = (margin / sp) * 100
+
+                # Critical Fractile (Newsvendor Optimal Point)
+                # Formula: Cu / (Cu + Co)
+                # Cu = Margin (Lost Sale Cost), Co = Holding Cost
+                optimal_sla_math = margin / (margin + holding_cost)
+
                 profit_context = f"""
-                PROFIT SCENARIO ACTIVE:
-                - Unit Cost: ${uc}
-                - Selling Price: ${sp}
-                - Profit Margin: ${margin} ({margin_pct:.1f}%)
-                - The user is looking at a heatmap showing profit vs risk.
-                - Higher Service Levels increase costs but capture more revenue.
+                [HEATMAP ANALYSIS DATA]
+                - The user is viewing a Profit vs. Risk Heatmap.
+                - Unit Cost: ${uc}, Selling Price: ${sp}.
+                - Margins: ${margin} ({margin_pct:.1f}%).
+                - OPTIMAL POINT: The heatmap peaks at a Service Level of approximately {optimal_sla_math:.1%}.
+                - INTERPRETATION: If the user sets the Service Level below {optimal_sla_math:.1%}, they lose money due to Stockouts (Lost Sales).
+                - If they go above {optimal_sla_math:.1%}, they lose money due to Excess Inventory (Holding Costs).
+                - ADVICE: Recommending setting the target SLA close to {optimal_sla_math:.1%} to maximize profit.
                 """
 
                 # --- AI CHAT (PROFIT CONTEXT) ---
-                st.info("💡 Tip: Ask the AI to summarize this heatmap or find the break-even point.")
+                st.info(f"💡 Optimal Service Level for Max Profit: **{optimal_sla_math * 100:.1f}%**")
                 render_chat_ui(df, metrics, extra_context=profit_context, key="profit_chat")
             else:
                 st.error("Selling Price must be higher than Unit Cost.")
