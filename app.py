@@ -134,7 +134,7 @@ lead_time_volatility = st.sidebar.slider("Lead Time Variance", 0.0, 2.0, 0.0, 0.
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 System Status: **Online** | v2.7.0 (Final Release)")
+st.sidebar.caption("🟢 System Status: **Online** | v2.7.1")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.markdown("### ℹ️ About")
@@ -214,37 +214,54 @@ if df is not None and not df.empty:
         with tab1:
             st.subheader(f"Analysis: {metrics['product_name']}")
 
-            # Chart
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=df['date'], y=df['demand'], mode='lines+markers', name='Actual',
-                                     line=dict(color='#2ca02c', width=3)))
+            # 1. Generate Forecast Data FIRST (for Chart AND AI Context)
+            f_df = None
+            forecast_text = ""
+
             if st.checkbox("Show Forecast", value=True):
                 f_df = forecast.generate_forecast(df)
                 if f_df is not None:
-                    last_pt = pd.DataFrame({'date': [df['date'].max()], 'demand': [df.iloc[-1]['demand']]})
-                    fig.add_trace(
-                        go.Scatter(x=pd.concat([last_pt, f_df])['date'], y=pd.concat([last_pt, f_df])['demand'],
-                                   mode='lines+markers', name='Forecast', line=dict(dash='dash', color='#1f77b4')))
+                    # Capture forecast for AI
+                    forecast_text = f"""
+                    \n[SYSTEM GENERATED FORECAST DATA]
+                    The linear regression projects the following future demand:
+                    {f_df.head(12).to_string(index=False)}
+                    ... (Trend continues linearly)
+                    """
+
+            # 2. Build Chart
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=df['date'], y=df['demand'], mode='lines+markers', name='Actual',
+                                     line=dict(color='#2ca02c', width=3)))
+
+            if f_df is not None:
+                last_pt = pd.DataFrame({'date': [df['date'].max()], 'demand': [df.iloc[-1]['demand']]})
+                combined_f = pd.concat([last_pt, f_df])
+                fig.add_trace(go.Scatter(x=combined_f['date'], y=combined_f['demand'],
+                                         mode='lines+markers', name='Forecast',
+                                         line=dict(dash='dash', color='#1f77b4')))
+
             st.plotly_chart(fig, use_container_width=True)
 
-            # KPI Metrics
+            # 3. KPI Metrics
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Avg Demand", f"{int(avg_demand)}")
             c2.metric("Optimal SLA", f"{actual_sla * 100:.1f}%")
-            # ACADEMIC LABELING CHANGE HERE
+            # ACADEMIC LABELING
             c3.metric("Safety Stock", f"{int(sim_safety_stock)}", "Newsvendor + RSS Model")
             c4.metric("EOQ Order", f"{int(eoq)}")
 
-            # PDF Report
+            # 4. PDF Report
             if st.button("📄 Generate PDF Report"):
                 with st.spinner("Writing..."):
                     summary = ai_brain.chat_with_data(f"Summary for {metrics['product_name']}", [], df, metrics)
                     pdf_bytes = report_gen.generate_pdf(metrics, summary)
                     st.download_button("⬇️ Download PDF", pdf_bytes, f"report.pdf", "application/pdf")
 
-            # --- AI CHAT (DASHBOARD CONTEXT) ---
-            render_chat_ui(df, metrics, extra_context="Focus on inventory levels and forecasting.",
-                           key="dashboard_chat")
+            # 5. AI CHAT (DASHBOARD CONTEXT)
+            # We inject the forecast text so the AI knows the future numbers
+            ai_context = f"Focus on inventory levels and forecasting. {forecast_text}"
+            render_chat_ui(df, metrics, extra_context=ai_context, key="dashboard_chat")
 
         # --- TAB 2: PROFIT OPTIMIZER ---
         with tab2:
