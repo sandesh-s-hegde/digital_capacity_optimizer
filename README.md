@@ -53,28 +53,6 @@ The application follows a **Micro-Module Architecture** to ensure scalability:
 
 ---
 
-## 🎯 Key Features
-
-### 🧠 Cognitive Intelligence
-
-* **🚁 Executive Command Center:** A "Watchtower" view that scans the entire database to flag products as **🟢 Normal**, **🔴 Surge Alert**, or **🟡 Low Velocity**.
-* **📄 Executive PDF Reporting:** One-click generation of professional summaries using AI to explain the "Why" behind the numbers.
-* **💬 Chat with Data:** Ask natural language questions like *"Why is safety stock so high for Widget A?"*
-
-### 🚢 Stochastic Risk Engine (New)
-
-* **⚡ Supplier Chaos Factor:** Models "Lead Time Variance" (e.g., shipping delays). The system calculates how much extra stock you need if your supplier is unreliable.
-* **📉 AI Demand Forecasting:** Uses Linear Regression to project demand trends 3 months into the future.
-* **💰 Profit Heatmaps:** Visualizes the exact "Sweet Spot" for order quantity based on unit economics.
-
-### 🏭 Core Operations
-
-* **📦 Multi-Product Support:** Track distinct SKUs ("Widget A", "Widget B") with isolated data streams.
-* **🚚 Bulk Import:** Drag-and-drop CSV upload to ingest historical data in seconds.
-* **🧨 Factory Reset:** "Danger Zone" tools to wipe data and reset ID counters for clean testing.
-
----
-
 ## 🧠 How It Works (The Math)
 
 This is not a black-box AI. The optimization engine is built on standard Operations Research principles:
