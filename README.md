@@ -12,6 +12,26 @@
 
 ---
 
+## 🧠 How It Works (The Math)
+
+This is not a black-box AI. The optimization engine is built on standard Operations Research principles:
+
+1.  **Newsvendor Model (Critical Ratio)**
+    * Applies the **Single-Period Newsvendor Model** to determine the optimal service level.
+    * *Formula:* `Critical Ratio = Cu / (Cu + Co)`
+    * *Why:* Balances the cost of overstocking (Holding Cost) vs. the cost of understocking (Stockout Cost).
+
+2.  **Stochastic Safety Stock**
+    * Uses a **Root Sum of Squares (RSS)** approach to account for two distinct types of uncertainty:
+        * **Demand Volatility:** Customer orders fluctuating month-to-month.
+        * **Supply Chain Risk:** Supplier lead time variability (e.g., shipping delays).
+    * *Result:* A mathematically robust buffer that protects service levels without bloating inventory.
+
+3.  **Economic Order Quantity (EOQ)**
+    * Calculates the optimal batch size to minimize total annual holding and ordering costs.
+
+---
+
 ## 🚀 Key Features
 
 ### 📊 1. Intelligent Dashboard
@@ -50,26 +70,6 @@ The application follows a **Micro-Module Architecture** to ensure scalability:
 4. **Data:** PostgreSQL (Production) with Multi-SKU support.
 
 **Data Flow:** `CSV/User Input` -> `DB Manager` -> `SQL` -> `Math Engine` -> `AI Context` -> `Strategic Report`
-
----
-
-## 🧠 How It Works (The Math)
-
-This is not a black-box AI. The optimization engine is built on standard Operations Research principles:
-
-1.  **Newsvendor Model (Critical Ratio)**
-    * Applies the **Single-Period Newsvendor Model** to determine the optimal service level.
-    * *Formula:* `Critical Ratio = Cu / (Cu + Co)`
-    * *Why:* Balances the cost of overstocking (Holding Cost) vs. the cost of understocking (Stockout Cost).
-
-2.  **Stochastic Safety Stock**
-    * Uses a **Root Sum of Squares (RSS)** approach to account for two distinct types of uncertainty:
-        * **Demand Volatility:** Customer orders fluctuating month-to-month.
-        * **Supply Chain Risk:** Supplier lead time variability (e.g., shipping delays).
-    * *Result:* A mathematically robust buffer that protects service levels without bloating inventory.
-
-3.  **Economic Order Quantity (EOQ)**
-    * Calculates the optimal batch size to minimize total annual holding and ordering costs.
 
 ---
 
