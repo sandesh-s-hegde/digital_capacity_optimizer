@@ -134,7 +134,21 @@ lead_time_volatility = st.sidebar.slider("Lead Time Variance", 0.0, 2.0, 0.0, 0.
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 System Status: **Online** | v2.6.5")
+st.sidebar.caption("🟢 System Status: **Online** | v2.7.0 (Final Release)")
+
+# --- ACADEMIC LABELING ---
+st.sidebar.markdown("### ℹ️ About")
+st.sidebar.info(
+    """
+    **Capacity Optimizer v2.7**
+
+    *Methods Applied:*
+    * 📊 Demand Forecasting (Linear)
+    * 🚢 **Newsvendor Inventory Model**
+    * 🔮 Stochastic Safety Stock (RSS)
+    * 💰 Cost-Profit Optimization
+    """
+)
 
 # --- MAIN PAGE ---
 st.title("📦 Digital Capacity Optimizer")
@@ -217,7 +231,8 @@ if df is not None and not df.empty:
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Avg Demand", f"{int(avg_demand)}")
             c2.metric("Optimal SLA", f"{actual_sla * 100:.1f}%")
-            c3.metric("Safety Stock", f"{int(sim_safety_stock)}", "Risk Adjusted")
+            # ACADEMIC LABELING CHANGE HERE
+            c3.metric("Safety Stock", f"{int(sim_safety_stock)}", "Newsvendor + RSS Model")
             c4.metric("EOQ Order", f"{int(eoq)}")
 
             # PDF Report
@@ -228,7 +243,6 @@ if df is not None and not df.empty:
                     st.download_button("⬇️ Download PDF", pdf_bytes, f"report.pdf", "application/pdf")
 
             # --- AI CHAT (DASHBOARD CONTEXT) ---
-            # Added key="dashboard_chat"
             render_chat_ui(df, metrics, extra_context="Focus on inventory levels and forecasting.",
                            key="dashboard_chat")
 
@@ -261,11 +275,10 @@ if df is not None and not df.empty:
 
                 # --- AI CHAT (PROFIT CONTEXT) ---
                 st.info("💡 Tip: Ask the AI to summarize this heatmap or find the break-even point.")
-                # Added key="profit_chat"
                 render_chat_ui(df, metrics, extra_context=profit_context, key="profit_chat")
             else:
                 st.error("Selling Price must be higher than Unit Cost.")
 
 # --- FOOTER ---
 st.markdown("---")
-st.caption("© 2026 Digital Capacity Inc. | v2.6.5")
+st.caption("© 2026 Digital Capacity Inc. | v2.7.0")
