@@ -15,7 +15,7 @@
 ## 🧮 Methodological Framework
 
 ### 1. The Newsvendor Logic
-[cite_start]The core optimisation engine moves beyond static averages to determine the **Critical Ratio** ($\alpha^*$) based on cost asymmetry:
+The core optimisation engine moves beyond static averages to determine the **Critical Ratio** ($\alpha^*$) based on cost asymmetry:
 
 $$\alpha^{*} = \frac{C_{u}}{C_{u} + C_{o}}$$
 
