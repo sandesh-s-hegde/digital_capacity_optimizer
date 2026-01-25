@@ -1,4 +1,4 @@
-# 🧠 AI-Powered Digital Capacity Optimizer
+# 🧠 Financial Digital Twin: Stochastic Inventory Optimization Engine
 
 **Author:** Sandesh Hegde
 
@@ -12,23 +12,17 @@
 
 ---
 
-## 🧠 How It Works (The Math)
+## 🧮 Methodological Framework
 
-This is not a black-box AI. The optimization engine is built on standard Operations Research principles:
+### 1. The Newsvendor Logic
+Unlike traditional deterministic models, this engine calculates the **Critical Fractile** ($P_{crit}$) to balance the cost of overstocking ($C_o$) against the cost of stockouts ($C_u$).
 
-1.  **Newsvendor Model (Critical Ratio)**
-    * Applies the **Single-Period Newsvendor Model** to determine the optimal service level.
-    * *Formula:* `Critical Ratio = Cu / (Cu + Co)`
-    * *Why:* Balances the cost of overstocking (Holding Cost) vs. the cost of understocking (Stockout Cost).
+$$P_{crit} = \frac{C_u}{C_o + C_u}$$
 
-2.  **Stochastic Safety Stock**
-    * Uses a **Root Sum of Squares (RSS)** approach to account for two distinct types of uncertainty:
-        * **Demand Volatility:** Customer orders fluctuating month-to-month.
-        * **Supply Chain Risk:** Supplier lead time variability (e.g., shipping delays).
-    * *Result:* A mathematically robust buffer that protects service levels without bloating inventory.
+### 2. Volatility Modelling
+Safety stock is dynamically adjusted based on the Root Sum of Squares (RSS) of demand variance ($\sigma_D$) and lead-time variance ($\sigma_{LT}$):
 
-3.  **Economic Order Quantity (EOQ)**
-    * Calculates the optimal batch size to minimize total annual holding and ordering costs.
+$$SS = Z_{\alpha} \sqrt{(L \cdot \sigma_D^2) + (\bar{D}^2 \cdot \sigma_{LT}^2)}$$
 
 ---
 
@@ -58,18 +52,13 @@ This is not a black-box AI. The optimization engine is built on standard Operati
 
 ---
 
-## 🏗️ Architecture
+## ⚙️ Technical Architecture
+The system is built on a cloud-native Python stack, designed for scalability and auditability.
 
-The application follows a **Micro-Module Architecture** to ensure scalability:
-
-1. **Presentation:** Streamlit (UI) + Plotly (Interactive Heatmaps)
-2. **Logic Layer:** * `db_manager.py`: CRUD operations & Bulk Import logic.
-   * `inventory_math.py`: Stochastic Engine (Z-Scores, Normal Distribution).
-   * `forecast.py`: Linear Regression Forecasting.
-3. **Intelligence:** Google Gemini 1.5 Flash (RAG - Chat with Data).
-4. **Data:** PostgreSQL (Production) with Multi-SKU support.
-
-**Data Flow:** `CSV/User Input` -> `DB Manager` -> `SQL` -> `Math Engine` -> `AI Context` -> `Strategic Report`
+* **Core Logic:** Stochastic calculus for Safety Stock (RSS method) & EOQ optimization.
+* **Intelligence Layer:** Google Gemini AI (via `ai_brain.py`) for contextual volatility analysis.
+* **Database:** PostgreSQL (Cloud) for persistent transaction logging.
+* **Frontend:** Streamlit (React-based) for interactive simulation.
 
 ---
 
