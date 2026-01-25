@@ -15,14 +15,18 @@
 ## 🧮 Methodological Framework
 
 ### 1. The Newsvendor Logic
-Unlike traditional deterministic models, this engine calculates the **Critical Fractile** ($P_{crit}$) to balance the cost of overstocking ($C_o$) against the cost of stockouts ($C_u$).
+[cite_start]The core optimisation engine moves beyond static averages to determine the **Critical Ratio** ($\alpha^*$) based on cost asymmetry:
 
-$$P_{crit} = \frac{C_u}{C_o + C_u}$$
+$$\alpha^{*} = \frac{C_{u}}{C_{u} + C_{o}}$$
+
+Where:
+* $C_{u}$: Cost of Underage (Lost Profit Margin)
+* $C_{o}$: Cost of Overage (Holding Cost + Obsolescence)
 
 ### 2. Volatility Modelling
-Safety stock is dynamically adjusted based on the Root Sum of Squares (RSS) of demand variance ($\sigma_D$) and lead-time variance ($\sigma_{LT}$):
+To account for supply chain volatility, the system calculates **Risk-Adjusted Safety Stock** using a Root Sum of Squares (RSS) approach, integrating both demand variability ($\sigma_{D}$) and lead time variability ($\sigma_{LT}$):
 
-$$SS = Z_{\alpha} \sqrt{(L \cdot \sigma_D^2) + (\bar{D}^2 \cdot \sigma_{LT}^2)}$$
+$$\text{Safety Stock} = Z_{\alpha}\sqrt{(\overline{L}\sigma_{D}^{2})+(\overline{D}^{2}\sigma_{LT}^{2})}$$
 
 ---
 
