@@ -1,0 +1,73 @@
+name: 🐛 Simulation Anomaly
+description: Report an inconsistency between the Digital Twin output and expected theoretical results.
+title: "[Bug]: "
+labels: ["bug", "research-validation"]
+assignees:
+  - sandesh-s-hegde
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 👋 Research Validation Protocol
+        Thanks for helping validate the Financial Digital Twin logic! Please provide as much detail as possible to assist with the audit.
+
+  - type: input
+    id: contact
+    attributes:
+      label: Contact Details
+      description: How can we get in touch with you if we need more info?
+      placeholder: ex. email@university.edu
+    validations:
+      required: false
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the simulation anomaly. What did you expect to happen based on the Newsvendor logic?
+      placeholder: Example: The Safety Stock calculation did not increase despite setting Lead Time Variance to 2.0...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: version
+    attributes:
+      label: Artifact Version
+      description: What version of the Digital Twin are you running?
+      options:
+        - v2.7.3 (Current Production)
+        - v2.7.0 (Legacy)
+        - Sandbox / Local Build
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: Browser Environment
+      description: Which browser are you using to access the Streamlit app?
+      multiple: true
+      options:
+        - Google Chrome
+        - Firefox
+        - Safari
+        - Microsoft Edge
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: Please copy and paste any errors from the Streamlit debug console (if running locally).
+      render: shell
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Research Integrity
+      description: By submitting this issue, you agree to follow the project standards.
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true
