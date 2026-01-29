@@ -8,7 +8,7 @@ All notable changes to the "Financial Digital Twin" research artifact will be do
 - **Documentation:** Implemented `CITATION.cff` for standardized research referencing.
 - **Badges:** Added status indicators to README for quick assessment.
 
-## [v2.6.5] - 2026-01-27
+## [v2.6.5] - 2026-01-24
 ### Added
 - **AI Intelligence Layer:** Integrated Google Gemini 2.0 Flash for real-time heatmap interpretation.
 - **Profit Optimizer:** Added Critical Ratio ($\alpha^*$) calculation to the Streamlit sidebar.
