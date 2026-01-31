@@ -85,7 +85,7 @@ if source_option == "🔌 Live Database":
                     st.success("Saved!")
                     st.rerun()
 
-    # B. DELETE RECORD (NEW FEATURE)
+    # B. DELETE RECORD
     with st.sidebar.expander("🗑️ Delete Record by ID"):
         del_id = st.number_input("Record ID", min_value=1, step=1)
         if st.button("Delete ID"):
@@ -145,7 +145,7 @@ lead_time_volatility = st.sidebar.slider("Lead Time Variance", 0.0, 2.0, 0.0, 0.
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 System Status: **Online** | v2.7.4")  # Version Bumped for Service Feature
+st.sidebar.caption("🟢 System Status: **Online** | v2.7.5")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.markdown("### ℹ️ About")
@@ -157,7 +157,7 @@ st.sidebar.info(
     * 📊 Demand Forecasting (Linear)
     * 🚢 **Newsvendor Inventory Model**
     * 🔮 Stochastic Safety Stock (RSS)
-    * 💰 Cost-Profit Optimization
+    * 💰 Cost Convexity Analysis
     """
 )
 
@@ -199,7 +199,7 @@ if source_option == "🔌 Live Database":
 # ANALYSIS TABS
 if df is not None and not df.empty:
 
-    # METRICS
+    # METRICS CALCULATION
     avg_demand = df['demand'].mean()
     std_dev_demand = df['demand'].std() if len(df) > 1 else 0
     actual_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
@@ -233,8 +233,8 @@ if df is not None and not df.empty:
     if source_option == "🔌 Live Database" and not selected_sku:
         st.warning("Please select a product from the sidebar.")
     else:
-        # Renamed Tab 1 to "Service & Logistics Hub"
-        tab1, tab2 = st.tabs(["📊 Service & Logistics Hub", "💰 Profit Optimizer"])
+        # TABS: Updated naming for Research Context
+        tab1, tab2 = st.tabs(["📊 Service & Logistics Hub", "💰 Financial Optimization Engine"])
 
         # --- TAB 1: SERVICE & LOGISTICS HUB ---
         with tab1:
@@ -270,7 +270,7 @@ if df is not None and not df.empty:
             st.plotly_chart(fig, use_container_width=True)
 
             # 3. KPI Metrics (Service Management Focused)
-            # This section specifically proves relevance to the "Service Management" Chair
+            # This specifically targets the "Service Management" Chair requirements
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Service Reliability", f"{metrics['reliability_score']}%", help="Fill Rate: % of demand met")
             c2.metric("Exp. Shortage", f"{metrics['expected_shortage']}", "- Unmet Units", delta_color="inverse")
@@ -285,13 +285,12 @@ if df is not None and not df.empty:
                     st.download_button("⬇️ Download PDF", pdf_bytes, f"report.pdf", "application/pdf")
 
             # 5. AI CHAT (DASHBOARD CONTEXT)
-            # We inject the forecast text so the AI knows the future numbers
             ai_context = f"Focus on service reliability and inventory levels. {forecast_text}"
             render_chat_ui(df, metrics, extra_context=ai_context, key="dashboard_chat")
 
-        # --- TAB 2: PROFIT OPTIMIZER ---
+        # --- TAB 2: FINANCIAL OPTIMIZATION ENGINE ---
         with tab2:
-            st.subheader("Profit Heatmap")
+            st.subheader("💰 Financial Optimization Engine")
 
             # Inputs
             c_input1, c_input2 = st.columns(2)
@@ -299,40 +298,45 @@ if df is not None and not df.empty:
             sp = c_input2.number_input("Selling Price ($)", 85.0)
 
             if sp > uc:
-                # 1. Show Heatmap
+                # 1. VISUALIZATION: The Cost Trade-off Curve (Mathematical Proof)
+                st.markdown("#### 📉 Cost-Service Trade-off Analysis")
+                try:
+                    st.plotly_chart(profit_optimizer.plot_cost_tradeoff(
+                        avg_demand, std_dev_demand, holding_cost, stockout_cost, uc, sp
+                    ), use_container_width=True)
+                except AttributeError:
+                    st.warning("⚠️ 'plot_cost_tradeoff' missing. Please update profit_optimizer.py")
+
+                # 2. VISUALIZATION: The Heatmap
+                st.markdown("#### 🗺️ Multi-Variable Sensitivity Heatmap")
                 st.plotly_chart(profit_optimizer.calculate_profit_scenarios(
                     avg_demand, std_dev_demand, holding_cost, stockout_cost, uc, sp
                 ), use_container_width=True)
 
-                # 2. INTELLIGENCE LAYER: Calculate the Data for the AI
+                # 3. INTELLIGENCE LAYER: Calculate the Data for the AI
                 margin = sp - uc
-                margin_pct = (margin / sp) * 100
 
                 # Critical Fractile (Newsvendor Optimal Point)
                 # Formula: Cu / (Cu + Co)
-                # Cu = Margin (Lost Sale Cost), Co = Holding Cost
                 optimal_sla_math = margin / (margin + holding_cost)
 
                 profit_context = f"""
-                [HEATMAP ANALYSIS DATA]
-                - The user is viewing a Profit vs. Risk Heatmap.
-                - Unit Cost: ${uc}, Selling Price: ${sp}.
-                - Margins: ${margin} ({margin_pct:.1f}%).
-                - OPTIMAL POINT: The heatmap peaks at a Service Level of approximately {optimal_sla_math:.1%}.
-                - INTERPRETATION: If the user sets the Service Level below {optimal_sla_math:.1%}, they lose money due to Stockouts (Lost Sales).
-                - If they go above {optimal_sla_math:.1%}, they lose money due to Excess Inventory (Holding Costs).
-                - ADVICE: Recommending setting the target SLA close to {optimal_sla_math:.1%} to maximize profit.
+                [OPTIMIZATION DATA]
+                - The user is analyzing the 'Convexity' of their supply chain costs.
+                - Theoretical Optimal Service Level (Newsvendor): {optimal_sla_math:.1%}
+                - At this level, the Marginal Cost of Holding equals the Marginal Cost of Stockout.
+                - The Chart shows the 'Total Cost' curve (Green Line) minimizing at this point.
                 """
 
                 # --- AI CHAT (PROFIT CONTEXT) ---
-                st.info(f"💡 Optimal Service Level for Max Profit: **{optimal_sla_math * 100:.1f}%**")
+                st.info(f"💡 Theoretical Optimal SLA (Newsvendor): **{optimal_sla_math * 100:.1f}%**")
                 render_chat_ui(df, metrics, extra_context=profit_context, key="profit_chat")
             else:
                 st.error("Selling Price must be higher than Unit Cost.")
 
 # --- FOOTER & RAW DATA INSPECTOR ---
 st.markdown("---")
-st.caption("© 2026 Digital Capacity Inc. | v2.7.5")
+st.caption("© 2026 Digital Capacity Inc. | v2.7.5 | Research Artifact")
 
 # Optional: View Raw Data to find IDs for deletion
 if source_option == "🔌 Live Database" and df is not None:
