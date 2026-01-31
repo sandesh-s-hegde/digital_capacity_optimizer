@@ -145,7 +145,7 @@ lead_time_volatility = st.sidebar.slider("Lead Time Variance", 0.0, 2.0, 0.0, 0.
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 System Status: **Online** | v2.7.3")
+st.sidebar.caption("🟢 System Status: **Online** | v2.7.4")  # Version Bumped for Service Feature
 
 # --- ACADEMIC LABELING ---
 st.sidebar.markdown("### ℹ️ About")
@@ -216,12 +216,27 @@ if df is not None and not df.empty:
         "product_name": selected_sku if selected_sku else "Data"
     }
 
+    # [NEW] Service Management Logic Integration
+    try:
+        service_metrics = inventory_math.calculate_service_implications(
+            metrics["avg_demand"],
+            metrics["std_dev"],
+            metrics["sla"],
+            stockout_cost
+        )
+        metrics.update(service_metrics)
+    except AttributeError:
+        # Fallback if function is missing in inventory_math.py
+        st.warning("⚠️ 'calculate_service_implications' not found in logic layer. Update inventory_math.py.")
+        metrics.update({"reliability_score": "N/A", "expected_shortage": "N/A", "penalty_cost": "N/A"})
+
     if source_option == "🔌 Live Database" and not selected_sku:
         st.warning("Please select a product from the sidebar.")
     else:
-        tab1, tab2 = st.tabs(["📊 Dashboard", "💰 Profit Optimizer"])
+        # Renamed Tab 1 to "Service & Logistics Hub"
+        tab1, tab2 = st.tabs(["📊 Service & Logistics Hub", "💰 Profit Optimizer"])
 
-        # --- TAB 1: DASHBOARD ---
+        # --- TAB 1: SERVICE & LOGISTICS HUB ---
         with tab1:
             st.subheader(f"Analysis: {metrics['product_name']}")
 
@@ -254,13 +269,13 @@ if df is not None and not df.empty:
 
             st.plotly_chart(fig, use_container_width=True)
 
-            # 3. KPI Metrics
+            # 3. KPI Metrics (Service Management Focused)
+            # This section specifically proves relevance to the "Service Management" Chair
             c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Avg Demand", f"{int(avg_demand)}")
-            c2.metric("Optimal SLA", f"{actual_sla * 100:.1f}%")
-            # ACADEMIC LABELING
-            c3.metric("Safety Stock", f"{int(sim_safety_stock)}", "Newsvendor + RSS Model")
-            c4.metric("EOQ Order", f"{int(eoq)}")
+            c1.metric("Service Reliability", f"{metrics['reliability_score']}%", help="Fill Rate: % of demand met")
+            c2.metric("Exp. Shortage", f"{metrics['expected_shortage']}", "- Unmet Units", delta_color="inverse")
+            c3.metric("Service Penalty", f"${metrics['penalty_cost']}", "Risk Cost", delta_color="inverse")
+            c4.metric("Safety Stock", f"{metrics['safety_stock']}", "Buffer Units")
 
             # 4. PDF Report
             if st.button("📄 Generate PDF Report"):
@@ -271,7 +286,7 @@ if df is not None and not df.empty:
 
             # 5. AI CHAT (DASHBOARD CONTEXT)
             # We inject the forecast text so the AI knows the future numbers
-            ai_context = f"Focus on inventory levels and forecasting. {forecast_text}"
+            ai_context = f"Focus on service reliability and inventory levels. {forecast_text}"
             render_chat_ui(df, metrics, extra_context=ai_context, key="dashboard_chat")
 
         # --- TAB 2: PROFIT OPTIMIZER ---
@@ -317,7 +332,7 @@ if df is not None and not df.empty:
 
 # --- FOOTER & RAW DATA INSPECTOR ---
 st.markdown("---")
-st.caption("© 2026 Digital Capacity Inc. | v2.7.0")
+st.caption("© 2026 Digital Capacity Inc. | v2.7.5")
 
 # Optional: View Raw Data to find IDs for deletion
 if source_option == "🔌 Live Database" and df is not None:
