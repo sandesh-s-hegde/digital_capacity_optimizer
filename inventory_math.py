@@ -76,3 +76,39 @@ def calculate_advanced_safety_stock(avg_demand, std_dev_demand, avg_lead_time, s
     combined_sigma = math.sqrt(demand_risk + supply_risk)
 
     return z_score * combined_sigma
+
+
+def calculate_service_implications(demand_mean, demand_std, target_sla, stockout_cost):
+    """
+    Calculates the Service Management implications of inventory decisions.
+    Specifically focuses on 'Service Failure' (Stockouts) frequency and intensity.
+    """
+    import scipy.stats as stats
+
+    # 1. Expected Fill Rate (Service Level)
+    # Even if we aim for 95% probability of no stockout (Cycle Service Level),
+    # the 'Fill Rate' (percent of demand met) is often higher.
+    # We calculate the expected 'Unit Shortage' (Unmet Demand).
+
+    z_score = stats.norm.ppf(target_sla)
+    safety_stock = z_score * demand_std
+    order_up_to = demand_mean + safety_stock
+
+    # Standard Loss Function for Normal Distribution (E[z] = standard normal loss)
+    # L(z) = pdf(z) - z * (1 - cdf(z))
+    pdf_z = stats.norm.pdf(z_score)
+    cdf_z = stats.norm.cdf(z_score)
+    standard_loss = pdf_z - (z_score * (1 - cdf_z))
+
+    expected_shortage_units = demand_std * standard_loss
+
+    # 2. Service Failure Impact
+    expected_penalty_cost = expected_shortage_units * stockout_cost
+    service_reliability_score = 100 * (1 - (expected_shortage_units / demand_mean))
+
+    return {
+        "safety_stock": int(safety_stock),
+        "expected_shortage": round(expected_shortage_units, 2),
+        "penalty_cost": round(expected_penalty_cost, 2),
+        "reliability_score": round(service_reliability_score, 2)
+    }
