@@ -218,10 +218,10 @@ if df is not None and not df.empty:
         total_workload, std_dev_demand, lead_time_months, lead_time_volatility, sim_sla / 100.0
     )
 
-    # 3. CAPACITY & RESILIENCE LOGIC (Research Module)
+    # 3. CAPACITY SHARING LOGIC
     total_required_capacity = total_workload + sim_safety_stock
 
-    # Calculate Horizontal Cooperation Costs
+    # Calculate Horizontal Cooperation Costs (via inventory_math module)
     cooperation_metrics = inventory_math.calculate_horizontal_sharing(
         total_required_capacity,
         warehouse_cap,
@@ -232,8 +232,7 @@ if df is not None and not df.empty:
     outsourced_vol = cooperation_metrics["overflow_vol"]
     dependency_pct = cooperation_metrics["dependency_ratio"]
 
-    # Calculate Resilience Index (Wallenburg "Relational View" Proxy)
-    # We estimate combined volatility for the score
+    # Calculate Resilience Index
     combined_volatility_est = (lead_time_months * (std_dev_demand ** 2) + (raw_avg_demand ** 2) * (
                 lead_time_volatility ** 2)) ** 0.5
     resilience_score = inventory_math.calculate_resilience_score(
@@ -252,7 +251,8 @@ if df is not None and not df.empty:
         "return_vol": int(reverse_logistics_vol),
         "outsourced": int(outsourced_vol),
         "resilience_score": resilience_score,
-        "dependency_ratio": dependency_pct
+        "dependency_ratio": dependency_pct,
+        "lead_time_risk": lead_time_volatility
     }
 
     # Service Logic Integration
@@ -301,18 +301,37 @@ if df is not None and not df.empty:
             # METRICS ROW 1: Operations
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Total Throughput", f"{int(total_workload)}", f"+{int(reverse_logistics_vol)} Returns")
-
-            # SHOW RESILIENCE (New!)
             c2.metric("Network Resilience", f"{metrics['resilience_score']}/100", "Risk Robustness")
 
-            # SHOW COOPERATION
+            # Metric: Horizontal Cooperation
             if outsourced_vol > 0:
                 c3.metric("⚠️ Partner Dependency", f"{metrics['dependency_ratio']}%",
-                          f"{int(outsourced_vol)} Units Outsourced", delta_color="inverse")
+                          f"{int(outsourced_vol)} Outsourced", delta_color="inverse")
             else:
                 c3.metric("Capacity Status", "Optimal", "100% Internal")
 
             c4.metric("Safety Buffer", f"{metrics['safety_stock']}", "Pallets")
+
+            # --- PDF REPORT GENERATION (Restored) ---
+            st.divider()
+            col_pdf1, col_pdf2 = st.columns([1, 4])
+            with col_pdf1:
+                if st.button("📄 Generate Research Report"):
+                    with st.spinner("Compiling Resilience & Cooperation Data..."):
+                        # Get a fresh summary specifically for the report
+                        summary = ai_brain.chat_with_data(
+                            f"Write a strategic executive summary for service lane {metrics['product_name']}. Focus on resilience and capacity sharing.",
+                            [], df, metrics
+                        )
+                        pdf_bytes = report_gen.generate_pdf(metrics, summary)
+
+                        # Show the download button dynamically
+                        st.download_button(
+                            label="⬇️ Download PDF Artifact",
+                            data=pdf_bytes,
+                            file_name=f"LSP_Resilience_Report_{metrics['product_name']}.pdf",
+                            mime="application/pdf"
+                        )
 
             # AI Context
             ai_context = f"""
