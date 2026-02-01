@@ -18,8 +18,8 @@ load_dotenv()
 
 # --- CONFIGURATION ---
 st.set_page_config(
-    page_title="Digital Capacity Optimizer",
-    page_icon="📦",
+    page_title="LSP Digital Capacity Twin",
+    page_icon="🚛",
     layout="wide"
 )
 
@@ -30,7 +30,7 @@ def render_chat_ui(df, metrics, extra_context="", key="default_chat"):
     Renders the Chat UI with specific context for the active tab.
     """
     st.divider()
-    st.subheader("💬 AI Analyst")
+    st.subheader("💬 LSP Strategy Assistant")
 
     # 1. Initialize Chat History
     if "messages" not in st.session_state: st.session_state.messages = []
@@ -42,17 +42,15 @@ def render_chat_ui(df, metrics, extra_context="", key="default_chat"):
         for msg in st.session_state.messages:
             st.chat_message(msg["role"]).markdown(msg["content"])
 
-    # 3. Input Area (Unique key ensures no conflict between tabs)
-    if prompt := st.chat_input("Ask a question...", key=key):
+    # 3. Input Area
+    if prompt := st.chat_input("Ask about capacity sharing or risk...", key=key):
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with chat_container:
             st.chat_message("user").markdown(prompt)
 
-            with st.spinner("Analyzing..."):
-                # Combine General Metrics + Tab Specific Context
+            with st.spinner("Analyzing Logistics Network..."):
                 full_query = f"{prompt}\n\n[CONTEXT OVERRIDE: {extra_context}]"
-
                 history = [{"role": m["role"], "parts": [m["content"]]} for m in st.session_state.messages]
                 response = ai_brain.chat_with_data(full_query, history, df, metrics)
 
@@ -63,113 +61,118 @@ def render_chat_ui(df, metrics, extra_context="", key="default_chat"):
 
 
 # --- SIDEBAR: CONTROLS ---
-st.sidebar.header("⚙️ Data Source")
-source_option = st.sidebar.radio("Mode:", ("🔌 Live Database", "📂 Sandbox (CSV)"))
+st.sidebar.header("⚙️ LSP Data Feed")
+source_option = st.sidebar.radio("Mode:", ("🔌 Live WMS Database", "📂 Sandbox (CSV)"))
 
 st.sidebar.markdown("---")
 
 # 1. LIVE DATABASE CONTROLS
 selected_sku = None
 
-if source_option == "🔌 Live Database":
+if source_option == "🔌 Live WMS Database":
     # A. SINGLE ENTRY
-    st.sidebar.subheader("📝 Log Inventory")
-    with st.sidebar.expander("Add Single Record", expanded=False):
+    st.sidebar.subheader("📝 Log Service Lane")
+    with st.sidebar.expander("Add Flow Record", expanded=False):
         with st.form("entry_form"):
-            new_product = st.text_input("Product Name (SKU)", value="Widget A")
+            new_product = st.text_input("Service Lane ID (e.g. BER-MUC)", value="Route A")
             new_date = st.date_input("Date", value=date.today())
-            new_demand = st.number_input("Order Qty", min_value=1, value=100)
+            new_demand = st.number_input("Volume (Pallets)", min_value=1, value=100)
 
-            if st.form_submit_button("💾 Save"):
+            if st.form_submit_button("💾 Save to Cloud"):
                 if db_manager.add_record(new_date, new_product, new_demand):
-                    st.success("Saved!")
+                    st.success("Log Updated!")
                     st.rerun()
 
     # B. DELETE RECORD
-    with st.sidebar.expander("🗑️ Delete Record by ID"):
+    with st.sidebar.expander("🗑️ Correction (Delete ID)"):
         del_id = st.number_input("Record ID", min_value=1, step=1)
-        if st.button("Delete ID"):
+        if st.button("Delete Transaction"):
             success, msg = db_manager.delete_record(del_id)
             if success:
-                st.success(f"ID {del_id} Deleted!")
-                st.rerun()
+                st.success(f"ID {del_id} Deleted!"); st.rerun()
             else:
                 st.error(msg)
 
     # C. BULK UPLOAD
-    with st.sidebar.expander("📂 Bulk Upload (CSV)"):
-        st.info("Columns needed: date, product_name, demand")
-        upload_csv = st.file_uploader("Upload History", type=["csv"])
-
+    with st.sidebar.expander("📂 Bulk Import"):
+        upload_csv = st.file_uploader("Upload WMS History", type=["csv"])
         if upload_csv:
-            if st.button("🚀 Import to Database"):
+            if st.button("🚀 Import"):
                 try:
                     bulk_df = pd.read_csv(upload_csv)
                     bulk_df.columns = bulk_df.columns.str.strip().str.lower().str.replace(' ', '_')
                     if {'date', 'product_name', 'demand'}.issubset(bulk_df.columns):
                         success, msg = db_manager.bulk_import_csv(bulk_df)
-                        if success:
-                            st.success(msg); st.rerun()
-                        else:
-                            st.error(f"Import Failed: {msg}")
+                        if success: st.success(msg); st.rerun()
                     else:
-                        st.error("CSV missing columns: date, product_name, demand")
+                        st.error("CSV must have: date, product_name, demand")
                 except Exception as e:
-                    st.error(f"File Error: {e}")
+                    st.error(f"Error: {e}")
 
     # D. FILTER
     st.sidebar.markdown("---")
-    st.sidebar.header("🔍 Filter Dashboard")
+    st.sidebar.header("🔍 Service Lane Selector")
     all_products = db_manager.get_unique_products()
     if all_products:
-        selected_sku = st.sidebar.selectbox("Select Product:", all_products)
+        selected_sku = st.sidebar.selectbox("Select Lane:", all_products)
     else:
-        st.sidebar.caption("No data yet.")
+        st.sidebar.caption("No data in WMS.")
 
     # E. DANGER ZONE
     st.sidebar.markdown("---")
-    with st.sidebar.expander("⚠️ Danger Zone"):
-        if st.button("🧨 Factory Reset"):
+    with st.sidebar.expander("⚠️ System Admin"):
+        if st.button("🧨 Reset Database"):
             if db_manager.reset_database(): st.success("Reset Complete"); st.rerun()
 
 st.sidebar.markdown("---")
 
-# 2. PARAMETERS
-st.sidebar.header("🔧 Settings")
-holding_cost = st.sidebar.number_input("Holding Cost ($)", value=config.HOLDING_COST)
-stockout_cost = st.sidebar.number_input("Stockout Cost ($)", value=config.STOCKOUT_COST)
+# 2. PARAMETERS (LSP Operations)
+st.sidebar.header("🔧 LSP Constraints")
 
-st.sidebar.subheader("🚢 Supplier Risk")
-lead_time_months = st.sidebar.slider("Avg Lead Time (Months)", 0.5, 6.0, 1.0, 0.5)
-lead_time_volatility = st.sidebar.slider("Lead Time Variance", 0.0, 2.0, 0.0, 0.1)
+# Rebranding Costs for Service Context
+holding_cost = st.sidebar.number_input("Warehousing Cost ($/pallet)", value=config.HOLDING_COST)
+stockout_cost = st.sidebar.number_input("SLA Penalty Cost ($/pallet)", value=config.STOCKOUT_COST)
+
+st.sidebar.subheader("📉 Volatility Factors")
+lead_time_months = st.sidebar.slider("Lead Time (Months)", 0.5, 6.0, 1.0, 0.5)
+lead_time_volatility = st.sidebar.slider("Supply Variance (σ_LT)", 0.0, 2.0, 0.2, 0.1)
+
+# Reverse Logistics Logic
+return_rate = st.sidebar.slider("Return Rate % (Reverse Logistics)", 0, 30, 5, 1,
+                                help="Impact of E-commerce Returns on Capacity")
+
+# Horizontal Cooperation Logic
+st.sidebar.subheader("🤝 Horizontal Cooperation")
+warehouse_cap = st.sidebar.number_input("Internal Capacity Limit", value=150)
+partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0,
+                                       help="Cost premium to outsource to competitor")
+
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 System Status: **Online** | v2.7.5")
+st.sidebar.caption("🟢 LSP Digital Twin | v3.0.0 Production")
 
 # --- ACADEMIC LABELING ---
-st.sidebar.markdown("### ℹ️ About")
 st.sidebar.info(
     """
-    **Capacity Optimizer v2.7**
+    **LSP Optimization Engine**
 
-    *Methods Applied:*
-    * 📊 Demand Forecasting (Linear)
-    * 🚢 **Newsvendor Inventory Model**
-    * 🔮 Stochastic Safety Stock (RSS)
-    * 💰 Cost Convexity Analysis
+    *Research Modules:*
+    * 🔄 **Reverse Logistics Load**
+    * 🤝 **Horizontal Capacity Sharing**
+    * 📉 **Newsvendor Risk Model**
     """
 )
 
 # --- MAIN PAGE ---
-st.title("📦 Digital Capacity Optimizer")
+st.title("🚛 LSP Digital Capacity Twin")
 
 # LOAD DATA
 df = None
-if source_option == "🔌 Live Database":
+if source_option == "🔌 Live WMS Database":
     df = db_manager.load_data(selected_sku)
 else:
-    st.info("Sandbox Mode: Upload a CSV to simulate.")
+    st.info("Sandbox Mode: Upload a CSV to simulate flows.")
     uploaded_file = st.file_uploader("Upload CSV", type=["csv"], key="sandbox")
     if uploaded_file:
         df = pd.read_csv(uploaded_file)
@@ -177,8 +180,8 @@ else:
         if 'date' in df.columns: df['date'] = pd.to_datetime(df['date'])
 
 # EXECUTIVE SUMMARY
-if source_option == "🔌 Live Database":
-    with st.expander("🚁 Executive Command Center", expanded=False):
+if source_option == "🔌 Live WMS Database":
+    with st.expander("🚁 Network Command Center", expanded=False):
         full_df = db_manager.load_data(None)
         if full_df is not None and not full_df.empty:
             summary_data = []
@@ -187,158 +190,167 @@ if source_option == "🔌 Live Database":
                 if not p_data.empty:
                     last = p_data.iloc[-1]
                     avg = p_data['demand'].mean()
-                    status = "🟢 Normal"
+                    status = "🟢 Optimized"
                     if last['demand'] > avg * 1.5:
-                        status = "🔴 Surge Alert"
+                        status = "🔴 Capacity Strain"
                     elif last['demand'] < avg * 0.5:
-                        status = "🟡 Low Velocity"
-                    summary_data.append({"Product": p, "Latest": int(last['demand']), "Status": status})
+                        status = "🟡 Underutilized"
+                    summary_data.append({"Service Lane": p, "Latest Vol": int(last['demand']), "Status": status})
             st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
     st.divider()
 
 # ANALYSIS TABS
 if df is not None and not df.empty:
 
-    # METRICS CALCULATION
-    avg_demand = df['demand'].mean()
+    # 1. BASE DEMAND CALCULATION
+    raw_avg_demand = df['demand'].mean()
+
+    # Impact of Returns on Workload
+    # In LSPs, returns = MORE work (handling/storage), not less.
+    reverse_logistics_vol = raw_avg_demand * (return_rate / 100.0)
+    total_workload = raw_avg_demand + reverse_logistics_vol
+
     std_dev_demand = df['demand'].std() if len(df) > 1 else 0
+
+    # 2. SAFETY STOCK CALCULATION (Using Total Workload)
     actual_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
     sim_safety_stock = inventory_math.calculate_advanced_safety_stock(
-        avg_demand, std_dev_demand, lead_time_months, lead_time_volatility, sim_sla / 100.0
+        total_workload, std_dev_demand, lead_time_months, lead_time_volatility, sim_sla / 100.0
     )
-    eoq = inventory_math.calculate_eoq(avg_demand * 12, config.ORDER_COST, holding_cost)
+
+    # 3. CAPACITY SHARING LOGIC
+    total_required_capacity = total_workload + sim_safety_stock
+    capacity_overflow = max(0, total_required_capacity - warehouse_cap)
+    outsourced_vol = capacity_overflow
+    internal_vol = total_required_capacity - outsourced_vol
+
+    # Costs
+    internal_cost = internal_vol * holding_cost
+    cooperation_cost = outsourced_vol * (holding_cost + partner_cost)  # Base + Surcharge
+    total_holding_cost = internal_cost + cooperation_cost
 
     metrics = {
-        "avg_demand": int(avg_demand), "std_dev": int(std_dev_demand),
-        "lead_time": lead_time_months, "lead_time_risk": lead_time_volatility,
-        "eoq": int(eoq), "safety_stock": int(sim_safety_stock),
-        "sla": sim_sla / 100.0, "actual_sla": actual_sla,
-        "product_name": selected_sku if selected_sku else "Data"
+        "avg_demand": int(total_workload),
+        "std_dev": int(std_dev_demand),
+        "lead_time": lead_time_months,
+        "safety_stock": int(sim_safety_stock),
+        "sla": sim_sla / 100.0,
+        "product_name": selected_sku if selected_sku else "Aggregate",
+        "return_vol": int(reverse_logistics_vol),
+        "outsourced": int(outsourced_vol)
     }
 
-    # [NEW] Service Management Logic Integration
+    # Service Logic Integration
     try:
         service_metrics = inventory_math.calculate_service_implications(
-            metrics["avg_demand"],
-            metrics["std_dev"],
-            metrics["sla"],
-            stockout_cost
+            metrics["avg_demand"], metrics["std_dev"], metrics["sla"], stockout_cost
         )
         metrics.update(service_metrics)
-    except AttributeError:
-        # Fallback if function is missing in inventory_math.py
-        st.warning("⚠️ 'calculate_service_implications' not found in logic layer. Update inventory_math.py.")
-        metrics.update({"reliability_score": "N/A", "expected_shortage": "N/A", "penalty_cost": "N/A"})
+    except:
+        metrics.update({"reliability_score": "N/A", "penalty_cost": "N/A"})
 
-    if source_option == "🔌 Live Database" and not selected_sku:
-        st.warning("Please select a product from the sidebar.")
+    if source_option == "🔌 Live WMS Database" and not selected_sku:
+        st.warning("Please select a Service Lane.")
     else:
-        # TABS: Updated naming for Research Context
-        tab1, tab2 = st.tabs(["📊 Service & Logistics Hub", "💰 Financial Optimization Engine"])
+        # TABS
+        tab1, tab2 = st.tabs(["📊 Capacity & Cooperation Hub", "💰 Profit & Risk Engine"])
 
-        # --- TAB 1: SERVICE & LOGISTICS HUB ---
+        # --- TAB 1: LOGISTICS HUB ---
         with tab1:
-            st.subheader(f"Analysis: {metrics['product_name']}")
+            st.subheader(f"Operations Analysis: {metrics['product_name']}")
 
-            # 1. Generate Forecast Data FIRST (for Chart AND AI Context)
+            # Forecast Logic
             f_df = None
             forecast_text = ""
-
-            if st.checkbox("Show Forecast", value=True):
+            if st.checkbox("Show Demand Forecast", value=True):
                 f_df = forecast.generate_forecast(df)
                 if f_df is not None:
-                    # Capture forecast for AI context
-                    forecast_text = f"""
-                    \n[SYSTEM GENERATED FORECAST DATA]
-                    The linear regression projects the following future demand:
-                    {f_df.head(12).to_string(index=False)}
-                    ... (Trend continues linearly)
-                    """
+                    forecast_text = f"Projected demand trend: {f_df.head(5)['demand'].tolist()}"
 
-            # 2. Build Chart
+            # Chart
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=df['date'], y=df['demand'], mode='lines+markers', name='Actual',
+            fig.add_trace(go.Scatter(x=df['date'], y=df['demand'], mode='lines+markers', name='Outbound Flow',
                                      line=dict(color='#2ca02c', width=3)))
+
+            # Visual: Show Capacity Ceiling
+            fig.add_hline(y=warehouse_cap, line_dash="dot", line_color="red", annotation_text="Internal Capacity Limit")
 
             if f_df is not None:
                 last_pt = pd.DataFrame({'date': [df['date'].max()], 'demand': [df.iloc[-1]['demand']]})
                 combined_f = pd.concat([last_pt, f_df])
-                fig.add_trace(go.Scatter(x=combined_f['date'], y=combined_f['demand'],
-                                         mode='lines+markers', name='Forecast',
-                                         line=dict(dash='dash', color='#1f77b4')))
+                fig.add_trace(go.Scatter(x=combined_f['date'], y=combined_f['demand'], mode='lines', name='Forecast',
+                                         line=dict(dash='dash', color='blue')))
 
             st.plotly_chart(fig, use_container_width=True)
 
-            # 3. KPI Metrics (Service Management Focused)
-            # This specifically targets the "Service Management" Chair requirements
+            # METRICS ROW 1: Operations
             c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Service Reliability", f"{metrics['reliability_score']}%", help="Fill Rate: % of demand met")
-            c2.metric("Exp. Shortage", f"{metrics['expected_shortage']}", "- Unmet Units", delta_color="inverse")
-            c3.metric("Service Penalty", f"${metrics['penalty_cost']}", "Risk Cost", delta_color="inverse")
-            c4.metric("Safety Stock", f"{metrics['safety_stock']}", "Buffer Units")
+            c1.metric("Total Throughput", f"{int(total_workload)}", f"+{int(reverse_logistics_vol)} Returns")
+            c2.metric("Reliability Score", f"{metrics.get('reliability_score', 'N/A')}%")
 
-            # 4. PDF Report
-            if st.button("📄 Generate PDF Report"):
-                with st.spinner("Writing..."):
-                    summary = ai_brain.chat_with_data(f"Summary for {metrics['product_name']}", [], df, metrics)
-                    pdf_bytes = report_gen.generate_pdf(metrics, summary)
-                    st.download_button("⬇️ Download PDF", pdf_bytes, f"report.pdf", "application/pdf")
+            # Metric: Horizontal Cooperation
+            if outsourced_vol > 0:
+                c3.metric("⚠️ Cooperation Triggered", f"{int(outsourced_vol)} Units", "Outsourced to Partner",
+                          delta_color="inverse")
+            else:
+                c3.metric("Capacity Status", "Optimal", "Fully Internal")
 
-            # 5. AI CHAT (DASHBOARD CONTEXT)
-            ai_context = f"Focus on service reliability and inventory levels. {forecast_text}"
-            render_chat_ui(df, metrics, extra_context=ai_context, key="dashboard_chat")
+            c4.metric("Safety Buffer", f"{metrics['safety_stock']}", "Pallets")
 
-        # --- TAB 2: FINANCIAL OPTIMIZATION ENGINE ---
+            # AI Context
+            ai_context = f"""
+            Analysis for Logistics Service Provider.
+            - Total Load: {total_workload} (Includes {reverse_logistics_vol} from Returns).
+            - Warehouse Cap: {warehouse_cap}. 
+            - Outsourced Volume: {outsourced_vol} (Horizontal Cooperation).
+            - Forecast: {forecast_text}
+            """
+            render_chat_ui(df, metrics, extra_context=ai_context, key="ops_chat")
+
+        # --- TAB 2: FINANCIAL ENGINE ---
         with tab2:
-            st.subheader("💰 Financial Optimization Engine")
+            st.subheader("💰 Financial Optimization")
 
-            # Inputs
             c_input1, c_input2 = st.columns(2)
-            uc = c_input1.number_input("Unit Cost ($)", 50.0)
-            sp = c_input2.number_input("Selling Price ($)", 85.0)
+            uc = c_input1.number_input("Handling Cost ($)", 50.0)
+            sp = c_input2.number_input("Service Revenue ($)", 85.0)
 
             if sp > uc:
-                # 1. VISUALIZATION: The Cost Trade-off Curve (Mathematical Proof)
-                st.markdown("#### 📉 Cost-Service Trade-off Analysis")
+                # 1. Cost Curve
+                st.markdown("#### 📉 Cost-Service Convexity")
                 try:
                     st.plotly_chart(profit_optimizer.plot_cost_tradeoff(
-                        avg_demand, std_dev_demand, holding_cost, stockout_cost, uc, sp
+                        total_workload, std_dev_demand, holding_cost, stockout_cost, uc, sp
                     ), use_container_width=True)
-                except AttributeError:
-                    st.warning("⚠️ 'plot_cost_tradeoff' missing. Please update profit_optimizer.py")
+                except:
+                    st.warning("Update profit_optimizer.py for charts")
 
-                # 2. VISUALIZATION: The Heatmap
-                st.markdown("#### 🗺️ Multi-Variable Sensitivity Heatmap")
+                # 2. Heatmap
+                st.markdown("#### 🗺️ Risk Sensitivity")
                 st.plotly_chart(profit_optimizer.calculate_profit_scenarios(
-                    avg_demand, std_dev_demand, holding_cost, stockout_cost, uc, sp
+                    total_workload, std_dev_demand, holding_cost, stockout_cost, uc, sp
                 ), use_container_width=True)
 
-                # 3. INTELLIGENCE LAYER: Calculate the Data for the AI
+                # Context
                 margin = sp - uc
-
-                # Critical Fractile (Newsvendor Optimal Point)
-                # Formula: Cu / (Cu + Co)
                 optimal_sla_math = margin / (margin + holding_cost)
 
                 profit_context = f"""
-                [OPTIMIZATION DATA]
-                - The user is analyzing the 'Convexity' of their supply chain costs.
-                - Theoretical Optimal Service Level (Newsvendor): {optimal_sla_math:.1%}
-                - At this level, the Marginal Cost of Holding equals the Marginal Cost of Stockout.
-                - The Chart shows the 'Total Cost' curve (Green Line) minimizing at this point.
+                FINANCIALS:
+                - Optimal Service Level: {optimal_sla_math:.1%}.
+                - Impact of Returns: Added {reverse_logistics_vol} units to cost basis.
+                - Cooperation Surcharges: ${outsourced_vol * partner_cost} extra cost due to capacity overflow.
                 """
 
-                # --- AI CHAT (PROFIT CONTEXT) ---
-                st.info(f"💡 Theoretical Optimal SLA (Newsvendor): **{optimal_sla_math * 100:.1f}%**")
-                render_chat_ui(df, metrics, extra_context=profit_context, key="profit_chat")
+                st.info(f"💡 Optimal SLA for Max Margin: **{optimal_sla_math * 100:.1f}%**")
+                render_chat_ui(df, metrics, extra_context=profit_context, key="fin_chat")
             else:
-                st.error("Selling Price must be higher than Unit Cost.")
+                st.error("Revenue must exceed Cost.")
 
-# --- FOOTER & RAW DATA INSPECTOR ---
+# --- FOOTER ---
 st.markdown("---")
-st.caption("© 2026 Digital Capacity Inc. | v2.7.5 | Research Artifact")
+st.caption(f"© 2026 Logistics Research Lab | v3.0.0 | Horizontal Cooperation Module Active")
 
-# Optional: View Raw Data to find IDs for deletion
-if source_option == "🔌 Live Database" and df is not None:
-    with st.expander("🔍 View Raw Database (Find IDs for Deletion here)"):
+if source_option == "🔌 Live WMS Database" and df is not None:
+    with st.expander("🔍 Inspect Warehouse Logs"):
         st.dataframe(df, use_container_width=True)
