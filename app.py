@@ -32,18 +32,15 @@ def render_chat_ui(df, metrics, extra_context="", key="default_chat"):
     st.divider()
     st.subheader("💬 LSP Strategy Assistant")
 
-    # 1. Initialize Chat History
     if "messages" not in st.session_state: st.session_state.messages = []
 
-    # 2. Scrollable Container
     chat_container = st.container(height=400, border=True)
 
     with chat_container:
         for msg in st.session_state.messages:
             st.chat_message(msg["role"]).markdown(msg["content"])
 
-    # 3. Input Area
-    if prompt := st.chat_input("Ask about capacity sharing or risk...", key=key):
+    if prompt := st.chat_input("Ask about capacity sharing, risk, or profit...", key=key):
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with chat_container:
@@ -129,11 +126,14 @@ st.sidebar.markdown("---")
 # 2. PARAMETERS (LSP Operations)
 st.sidebar.header("🔧 LSP Constraints")
 
-# Rebranding Costs for Service Context
-holding_cost = st.sidebar.number_input("Warehousing Cost ($/pallet)", value=config.HOLDING_COST)
-stockout_cost = st.sidebar.number_input("SLA Penalty Cost ($/pallet)", value=config.STOCKOUT_COST)
+# Financials (MOVED TO SIDEBAR FOR AI VISIBILITY)
+st.sidebar.subheader("💰 Unit Economics")
+uc = st.sidebar.number_input("Handling Cost ($)", value=50.0)
+sp = st.sidebar.number_input("Service Revenue ($)", value=85.0)
 
 st.sidebar.subheader("📉 Volatility Factors")
+holding_cost = st.sidebar.number_input("Warehousing Cost ($/pallet)", value=config.HOLDING_COST)
+stockout_cost = st.sidebar.number_input("SLA Penalty Cost ($/pallet)", value=config.STOCKOUT_COST)
 lead_time_months = st.sidebar.slider("Lead Time (Months)", 0.5, 6.0, 1.0, 0.5)
 lead_time_volatility = st.sidebar.slider("Supply Variance (σ_LT)", 0.0, 2.0, 0.2, 0.1)
 
@@ -204,15 +204,11 @@ if df is not None and not df.empty:
 
     # 1. BASE DEMAND CALCULATION
     raw_avg_demand = df['demand'].mean()
-
-    # Impact of Returns on Workload
-    # In LSPs, returns = MORE work (handling/storage), not less.
     reverse_logistics_vol = raw_avg_demand * (return_rate / 100.0)
     total_workload = raw_avg_demand + reverse_logistics_vol
-
     std_dev_demand = df['demand'].std() if len(df) > 1 else 0
 
-    # 2. SAFETY STOCK CALCULATION (Using Total Workload)
+    # 2. SAFETY STOCK CALCULATION
     actual_sla = inventory_math.calculate_newsvendor_target(holding_cost, stockout_cost)
     sim_safety_stock = inventory_math.calculate_advanced_safety_stock(
         total_workload, std_dev_demand, lead_time_months, lead_time_volatility, sim_sla / 100.0
@@ -220,27 +216,20 @@ if df is not None and not df.empty:
 
     # 3. CAPACITY SHARING LOGIC
     total_required_capacity = total_workload + sim_safety_stock
-
-    # Calculate Horizontal Cooperation Costs (via inventory_math module)
     cooperation_metrics = inventory_math.calculate_horizontal_sharing(
-        total_required_capacity,
-        warehouse_cap,
-        partner_cost,
-        holding_cost
+        total_required_capacity, warehouse_cap, partner_cost, holding_cost
     )
-
     outsourced_vol = cooperation_metrics["overflow_vol"]
     dependency_pct = cooperation_metrics["dependency_ratio"]
 
-    # Calculate Resilience Index
+    # 4. RESILIENCE
     combined_volatility_est = (lead_time_months * (std_dev_demand ** 2) + (raw_avg_demand ** 2) * (
                 lead_time_volatility ** 2)) ** 0.5
     resilience_score = inventory_math.calculate_resilience_score(
-        sim_safety_stock,
-        combined_volatility_est,
-        dependency_pct
+        sim_safety_stock, combined_volatility_est, dependency_pct
     )
 
+    # METRICS DICTIONARY (NOW INCLUDES FINANCIALS FOR AI)
     metrics = {
         "avg_demand": int(total_workload),
         "std_dev": int(std_dev_demand),
@@ -252,7 +241,12 @@ if df is not None and not df.empty:
         "outsourced": int(outsourced_vol),
         "resilience_score": resilience_score,
         "dependency_ratio": dependency_pct,
-        "lead_time_risk": lead_time_volatility
+        "lead_time_risk": lead_time_volatility,
+        # ADDED FINANCIALS HERE
+        "unit_cost": uc,
+        "selling_price": sp,
+        "holding_cost": holding_cost,
+        "stockout_cost": stockout_cost
     }
 
     # Service Logic Integration
@@ -274,7 +268,7 @@ if df is not None and not df.empty:
         with tab1:
             st.subheader(f"Operations Analysis: {metrics['product_name']}")
 
-            # Forecast Logic
+            # Forecast
             f_df = None
             forecast_text = ""
             if st.checkbox("Show Demand Forecast", value=True):
@@ -286,8 +280,6 @@ if df is not None and not df.empty:
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=df['date'], y=df['demand'], mode='lines+markers', name='Outbound Flow',
                                      line=dict(color='#2ca02c', width=3)))
-
-            # Visual: Show Capacity Ceiling
             fig.add_hline(y=warehouse_cap, line_dash="dot", line_color="red", annotation_text="Internal Capacity Limit")
 
             if f_df is not None:
@@ -298,34 +290,28 @@ if df is not None and not df.empty:
 
             st.plotly_chart(fig, use_container_width=True)
 
-            # METRICS ROW 1: Operations
+            # Metrics
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Total Throughput", f"{int(total_workload)}", f"+{int(reverse_logistics_vol)} Returns")
             c2.metric("Network Resilience", f"{metrics['resilience_score']}/100", "Risk Robustness")
-
-            # Metric: Horizontal Cooperation
             if outsourced_vol > 0:
                 c3.metric("⚠️ Partner Dependency", f"{metrics['dependency_ratio']}%",
                           f"{int(outsourced_vol)} Outsourced", delta_color="inverse")
             else:
                 c3.metric("Capacity Status", "Optimal", "100% Internal")
-
             c4.metric("Safety Buffer", f"{metrics['safety_stock']}", "Pallets")
 
-            # --- PDF REPORT GENERATION (Restored) ---
+            # PDF Report
             st.divider()
             col_pdf1, col_pdf2 = st.columns([1, 4])
             with col_pdf1:
                 if st.button("📄 Generate Research Report"):
                     with st.spinner("Compiling Resilience & Cooperation Data..."):
-                        # Get a fresh summary specifically for the report
                         summary = ai_brain.chat_with_data(
                             f"Write a strategic executive summary for service lane {metrics['product_name']}. Focus on resilience and capacity sharing.",
                             [], df, metrics
                         )
                         pdf_bytes = report_gen.generate_pdf(metrics, summary)
-
-                        # Show the download button dynamically
                         st.download_button(
                             label="⬇️ Download PDF Artifact",
                             data=pdf_bytes,
@@ -333,26 +319,15 @@ if df is not None and not df.empty:
                             mime="application/pdf"
                         )
 
-            # AI Context
-            ai_context = f"""
-            Analysis for Logistics Service Provider.
-            - Total Load: {total_workload} (Includes {reverse_logistics_vol} from Returns).
-            - Warehouse Cap: {warehouse_cap}. 
-            - Outsourced Volume: {outsourced_vol} (Horizontal Cooperation).
-            - Forecast: {forecast_text}
-            """
+            ai_context = f"Analysis for Logistics Service Provider. Total Load: {total_workload}. Warehouse Cap: {warehouse_cap}. Forecast: {forecast_text}"
             render_chat_ui(df, metrics, extra_context=ai_context, key="ops_chat")
 
         # --- TAB 2: FINANCIAL ENGINE ---
         with tab2:
             st.subheader("💰 Financial Optimization")
 
-            c_input1, c_input2 = st.columns(2)
-            uc = c_input1.number_input("Handling Cost ($)", 50.0)
-            sp = c_input2.number_input("Service Revenue ($)", 85.0)
-
+            # (Inputs moved to Sidebar, so we just check logic here)
             if sp > uc:
-                # 1. Cost Curve
                 st.markdown("#### 📉 Cost-Service Convexity")
                 try:
                     st.plotly_chart(profit_optimizer.plot_cost_tradeoff(
@@ -361,25 +336,15 @@ if df is not None and not df.empty:
                 except:
                     st.warning("Update profit_optimizer.py for charts")
 
-                # 2. Heatmap
                 st.markdown("#### 🗺️ Risk Sensitivity")
                 st.plotly_chart(profit_optimizer.calculate_profit_scenarios(
                     total_workload, std_dev_demand, holding_cost, stockout_cost, uc, sp
                 ), use_container_width=True)
 
-                # Context
-                margin = sp - uc
-                optimal_sla_math = margin / (margin + holding_cost)
-
-                profit_context = f"""
-                FINANCIALS:
-                - Optimal Service Level: {optimal_sla_math:.1%}.
-                - Impact of Returns: Added {reverse_logistics_vol} units to cost basis.
-                - Cooperation Surcharges: ${outsourced_vol * partner_cost} extra cost due to capacity overflow.
-                """
-
-                st.info(f"💡 Optimal SLA for Max Margin: **{optimal_sla_math * 100:.1f}%**")
-                render_chat_ui(df, metrics, extra_context=profit_context, key="fin_chat")
+                # We don't need to manually calculate context here anymore,
+                # because the AI now calculates it natively in ai_brain.py
+                st.info(f"💡 The AI Analyst can now explain these charts directly.")
+                render_chat_ui(df, metrics, extra_context="User is looking at Profit Heatmaps.", key="fin_chat")
             else:
                 st.error("Revenue must exceed Cost.")
 
