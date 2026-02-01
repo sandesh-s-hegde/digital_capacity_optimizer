@@ -218,16 +218,29 @@ if df is not None and not df.empty:
         total_workload, std_dev_demand, lead_time_months, lead_time_volatility, sim_sla / 100.0
     )
 
-    # 3. CAPACITY SHARING LOGIC
+    # 3. CAPACITY & RESILIENCE LOGIC (Research Module)
     total_required_capacity = total_workload + sim_safety_stock
-    capacity_overflow = max(0, total_required_capacity - warehouse_cap)
-    outsourced_vol = capacity_overflow
-    internal_vol = total_required_capacity - outsourced_vol
 
-    # Costs
-    internal_cost = internal_vol * holding_cost
-    cooperation_cost = outsourced_vol * (holding_cost + partner_cost)  # Base + Surcharge
-    total_holding_cost = internal_cost + cooperation_cost
+    # Calculate Horizontal Cooperation Costs
+    cooperation_metrics = inventory_math.calculate_horizontal_sharing(
+        total_required_capacity,
+        warehouse_cap,
+        partner_cost,
+        holding_cost
+    )
+
+    outsourced_vol = cooperation_metrics["overflow_vol"]
+    dependency_pct = cooperation_metrics["dependency_ratio"]
+
+    # Calculate Resilience Index (Wallenburg "Relational View" Proxy)
+    # We estimate combined volatility for the score
+    combined_volatility_est = (lead_time_months * (std_dev_demand ** 2) + (raw_avg_demand ** 2) * (
+                lead_time_volatility ** 2)) ** 0.5
+    resilience_score = inventory_math.calculate_resilience_score(
+        sim_safety_stock,
+        combined_volatility_est,
+        dependency_pct
+    )
 
     metrics = {
         "avg_demand": int(total_workload),
@@ -237,7 +250,9 @@ if df is not None and not df.empty:
         "sla": sim_sla / 100.0,
         "product_name": selected_sku if selected_sku else "Aggregate",
         "return_vol": int(reverse_logistics_vol),
-        "outsourced": int(outsourced_vol)
+        "outsourced": int(outsourced_vol),
+        "resilience_score": resilience_score,
+        "dependency_ratio": dependency_pct
     }
 
     # Service Logic Integration
@@ -286,14 +301,16 @@ if df is not None and not df.empty:
             # METRICS ROW 1: Operations
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Total Throughput", f"{int(total_workload)}", f"+{int(reverse_logistics_vol)} Returns")
-            c2.metric("Reliability Score", f"{metrics.get('reliability_score', 'N/A')}%")
 
-            # Metric: Horizontal Cooperation
+            # SHOW RESILIENCE (New!)
+            c2.metric("Network Resilience", f"{metrics['resilience_score']}/100", "Risk Robustness")
+
+            # SHOW COOPERATION
             if outsourced_vol > 0:
-                c3.metric("⚠️ Cooperation Triggered", f"{int(outsourced_vol)} Units", "Outsourced to Partner",
-                          delta_color="inverse")
+                c3.metric("⚠️ Partner Dependency", f"{metrics['dependency_ratio']}%",
+                          f"{int(outsourced_vol)} Units Outsourced", delta_color="inverse")
             else:
-                c3.metric("Capacity Status", "Optimal", "Fully Internal")
+                c3.metric("Capacity Status", "Optimal", "100% Internal")
 
             c4.metric("Safety Buffer", f"{metrics['safety_stock']}", "Pallets")
 
