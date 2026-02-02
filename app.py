@@ -131,7 +131,7 @@ st.sidebar.subheader("💰 Unit Economics")
 uc = st.sidebar.number_input("Handling Cost ($)", value=50.0)
 sp = st.sidebar.number_input("Service Revenue ($)", value=85.0)
 
-# --- NEW: STRESS TEST MODULE ---
+# --- STRESS TEST MODULE ---
 st.sidebar.subheader("🌪️ Risk Simulation")
 disruption_mode = st.sidebar.checkbox("🔥 Simulate Supplier Shock",
                                       help="Simulates a port strike: Doubles Lead Time & Variance.")
@@ -312,7 +312,7 @@ if df is not None and not df.empty:
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Total Throughput", f"{int(total_workload)}", f"+{int(reverse_logistics_vol)} Returns")
 
-            # Conditional Color for Resilience
+            # Resilience with Color Logic
             res_delta = "off"
             if metrics['resilience_score'] < 50: res_delta = "- Critical Vulnerability"
             c2.metric("Network Resilience", f"{metrics['resilience_score']}/100",
@@ -325,8 +325,9 @@ if df is not None and not df.empty:
                 c3.metric("Capacity Status", "Optimal", "100% Internal")
 
             # Safety Stock Highlight in Shock Mode
-            c4.metric("Safety Buffer", f"{metrics['safety_stock']}", "Pallets",
-                      delta="Surge!" if disruption_mode else None)
+            delta_msg = "Surge!" if disruption_mode else "Pallets"
+            delta_col = "inverse" if disruption_mode else "off"
+            c4.metric("Safety Buffer", f"{metrics['safety_stock']}", delta=delta_msg, delta_color=delta_col)
 
             # PDF Report
             st.divider()
