@@ -8,7 +8,7 @@ load_dotenv()
 def chat_with_data(user_query, chat_history, df, metrics):
     """
     Sends the user query + rigorous data context to Gemini.
-    Includes financial logic to interpret Heatmaps and Profitability.
+    Includes financial logic and VISUAL DIAGRAM INJECTIONS.
     """
 
     # 1. SETUP API
@@ -30,8 +30,7 @@ def chat_with_data(user_query, chat_history, df, metrics):
         h_cost = metrics.get('holding_cost', 10)
         margin = sp - uc
 
-        # The Critical Ratio (Newsvendor Optimal Point) - The "Peak" of the Heatmap
-        # Formula: Margin / (Margin + Holding Cost)
+        # The Critical Ratio (Newsvendor Optimal Point)
         if (margin + h_cost) > 0:
             optimal_sla_math = margin / (margin + h_cost)
         else:
@@ -58,24 +57,25 @@ def chat_with_data(user_query, chat_history, df, metrics):
         - Resilience Score: {metrics.get('resilience_score', 'N/A')}/100
         """
 
-        # 4. SYSTEM INSTRUCTIONS
+        # 4. SYSTEM INSTRUCTIONS (Visual Upgrade)
         system_instruction = """
-                You are a specialized Research Assistant for a Logistics Service Provider.
+        You are a specialized Research Assistant for a Logistics Service Provider.
 
-                ### STRICT RULES:
-                1. **SCOPE:** Refuse questions about capitals, weather, or non-logistics topics.
-                2. **ACCURACY:** If the user asks "What does the heatmap say?", use the [FINANCIAL METRICS] section above. Explain that the heatmap shows the trade-off between risk and cost.
-                3. **DIAGRAMS:** When explaining concepts, use these EXACT markdown links to show diagrams:
-                   - If explaining the "Sweet Spot", "Optimal SLA", or "Newsvendor Model": 
-                     Display this image: 
-                     ![Normal Distribution](https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Standard_deviation_diagram.svg/640px-Standard_deviation_diagram.svg.png)
+        ### STRICT RULES:
+        1. **SCOPE:** Refuse questions about capitals, weather, or non-logistics topics.
+        2. **ACCURACY:** If the user asks "What does the heatmap say?", use the [FINANCIAL METRICS] section.
 
-                   - If explaining "Cost Trade-offs" or "EOQ": 
-                     Display this image:
-                     ![Cost Curve](https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Economic_Order_Quantity_pdf.svg/640px-Economic_Order_Quantity_pdf.svg.png)
+        3. **DIAGRAMS:** When explaining concepts, use these EXACT markdown links to show diagrams:
+           - If explaining "Sweet Spot", "Optimal SLA", or "Normal Distribution": 
+             Display this image: 
+             ![Newsvendor Model](https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Standard_deviation_diagram.svg/320px-Standard_deviation_diagram.svg.png)
 
-                4. **TONE:** Professional, Concise.
-                """
+           - If explaining "Cost Trade-offs" or "Convexity": 
+             Display this image:
+             ![Cost Curve](https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Economic_Order_Quantity_pdf.svg/320px-Economic_Order_Quantity_pdf.svg.png)
+
+        4. **TONE:** Professional, Concise.
+        """
 
         # 5. INITIALIZE MODEL
         model = genai.GenerativeModel(
@@ -89,9 +89,7 @@ def chat_with_data(user_query, chat_history, df, metrics):
             role = "user" if msg['role'] == 'user' else "model"
             clean_history.append({"role": role, "parts": [msg['parts'][0]]})
 
-        # --- THE FIX IS HERE ---
         chat = model.start_chat(history=clean_history)
-        # -----------------------
 
         full_prompt = f"{data_context}\n\nUSER QUESTION: {user_query}"
 
