@@ -126,16 +126,36 @@ st.sidebar.markdown("---")
 # 2. PARAMETERS (LSP Operations)
 st.sidebar.header("🔧 LSP Constraints")
 
-# Financials (MOVED TO SIDEBAR FOR AI VISIBILITY)
+# Financials
 st.sidebar.subheader("💰 Unit Economics")
 uc = st.sidebar.number_input("Handling Cost ($)", value=50.0)
 sp = st.sidebar.number_input("Service Revenue ($)", value=85.0)
 
-st.sidebar.subheader("📉 Volatility Factors")
-holding_cost = st.sidebar.number_input("Warehousing Cost ($/pallet)", value=config.HOLDING_COST)
-stockout_cost = st.sidebar.number_input("SLA Penalty Cost ($/pallet)", value=config.STOCKOUT_COST)
-lead_time_months = st.sidebar.slider("Lead Time (Months)", 0.5, 6.0, 1.0, 0.5)
-lead_time_volatility = st.sidebar.slider("Supply Variance (σ_LT)", 0.0, 2.0, 0.2, 0.1)
+# --- NEW: STRESS TEST MODULE ---
+st.sidebar.subheader("🌪️ Risk Simulation")
+disruption_mode = st.sidebar.checkbox("🔥 Simulate Supplier Shock",
+                                      help="Simulates a port strike: Doubles Lead Time & Variance.")
+
+if disruption_mode:
+    st.sidebar.error("⚠️ SHOCK EVENT ACTIVE")
+    # Force high values during shock
+    holding_cost = st.sidebar.number_input("Warehousing Cost ($/pallet)", value=config.HOLDING_COST)
+    stockout_cost = st.sidebar.number_input("SLA Penalty Cost ($/pallet)", value=config.STOCKOUT_COST)
+
+    # Visual feedback only - logic uses multipliers below
+    st.sidebar.slider("Lead Time (Months)", 0.5, 6.0, 3.0, disabled=True)
+    st.sidebar.slider("Supply Variance (σ_LT)", 0.0, 2.0, 1.5, disabled=True)
+
+    # The actual values passed to the math engine
+    lead_time_months = 3.0
+    lead_time_volatility = 1.5
+
+else:
+    # Normal Mode
+    holding_cost = st.sidebar.number_input("Warehousing Cost ($/pallet)", value=config.HOLDING_COST)
+    stockout_cost = st.sidebar.number_input("SLA Penalty Cost ($/pallet)", value=config.STOCKOUT_COST)
+    lead_time_months = st.sidebar.slider("Lead Time (Months)", 0.5, 6.0, 1.0, 0.5)
+    lead_time_volatility = st.sidebar.slider("Supply Variance (σ_LT)", 0.0, 2.0, 0.2, 0.1)
 
 # Reverse Logistics Logic
 return_rate = st.sidebar.slider("Return Rate % (Reverse Logistics)", 0, 30, 5, 1,
@@ -150,7 +170,7 @@ partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0,
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 LSP Digital Twin | v3.0.0 Production")
+st.sidebar.caption("🟢 LSP Digital Twin | v3.1.0 Resilience Module")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.info(
@@ -158,7 +178,7 @@ st.sidebar.info(
     **LSP Optimization Engine**
 
     *Research Modules:*
-    * 🔄 **Reverse Logistics Load**
+    * 🌪️ **Disruption Simulation**
     * 🤝 **Horizontal Capacity Sharing**
     * 📉 **Newsvendor Risk Model**
     """
@@ -229,7 +249,6 @@ if df is not None and not df.empty:
         sim_safety_stock, combined_volatility_est, dependency_pct
     )
 
-    # METRICS DICTIONARY (NOW INCLUDES FINANCIALS FOR AI)
     metrics = {
         "avg_demand": int(total_workload),
         "std_dev": int(std_dev_demand),
@@ -242,7 +261,6 @@ if df is not None and not df.empty:
         "resilience_score": resilience_score,
         "dependency_ratio": dependency_pct,
         "lead_time_risk": lead_time_volatility,
-        # ADDED FINANCIALS HERE
         "unit_cost": uc,
         "selling_price": sp,
         "holding_cost": holding_cost,
@@ -293,13 +311,22 @@ if df is not None and not df.empty:
             # Metrics
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Total Throughput", f"{int(total_workload)}", f"+{int(reverse_logistics_vol)} Returns")
-            c2.metric("Network Resilience", f"{metrics['resilience_score']}/100", "Risk Robustness")
+
+            # Conditional Color for Resilience
+            res_delta = "off"
+            if metrics['resilience_score'] < 50: res_delta = "- Critical Vulnerability"
+            c2.metric("Network Resilience", f"{metrics['resilience_score']}/100",
+                      res_delta if disruption_mode else "Risk Robustness")
+
             if outsourced_vol > 0:
                 c3.metric("⚠️ Partner Dependency", f"{metrics['dependency_ratio']}%",
                           f"{int(outsourced_vol)} Outsourced", delta_color="inverse")
             else:
                 c3.metric("Capacity Status", "Optimal", "100% Internal")
-            c4.metric("Safety Buffer", f"{metrics['safety_stock']}", "Pallets")
+
+            # Safety Stock Highlight in Shock Mode
+            c4.metric("Safety Buffer", f"{metrics['safety_stock']}", "Pallets",
+                      delta="Surge!" if disruption_mode else None)
 
             # PDF Report
             st.divider()
@@ -319,14 +346,13 @@ if df is not None and not df.empty:
                             mime="application/pdf"
                         )
 
-            ai_context = f"Analysis for Logistics Service Provider. Total Load: {total_workload}. Warehouse Cap: {warehouse_cap}. Forecast: {forecast_text}"
+            ai_context = f"Analysis for Logistics Service Provider. Total Load: {total_workload}. Warehouse Cap: {warehouse_cap}. Forecast: {forecast_text}. SHOCK MODE: {disruption_mode}"
             render_chat_ui(df, metrics, extra_context=ai_context, key="ops_chat")
 
         # --- TAB 2: FINANCIAL ENGINE ---
         with tab2:
             st.subheader("💰 Financial Optimization")
 
-            # (Inputs moved to Sidebar, so we just check logic here)
             if sp > uc:
                 st.markdown("#### 📉 Cost-Service Convexity")
                 try:
@@ -341,8 +367,6 @@ if df is not None and not df.empty:
                     total_workload, std_dev_demand, holding_cost, stockout_cost, uc, sp
                 ), use_container_width=True)
 
-                # We don't need to manually calculate context here anymore,
-                # because the AI now calculates it natively in ai_brain.py
                 st.info(f"💡 The AI Analyst can now explain these charts directly.")
                 render_chat_ui(df, metrics, extra_context="User is looking at Profit Heatmaps.", key="fin_chat")
             else:
@@ -350,7 +374,7 @@ if df is not None and not df.empty:
 
 # --- FOOTER ---
 st.markdown("---")
-st.caption(f"© 2026 Logistics Research Lab | v3.0.0 | Horizontal Cooperation Module Active")
+st.caption(f"© 2026 Logistics Research Lab | v3.1.0 | Stress Test Module Active")
 
 if source_option == "🔌 Live WMS Database" and df is not None:
     with st.expander("🔍 Inspect Warehouse Logs"):
