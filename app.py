@@ -12,6 +12,7 @@ import ai_brain
 import report_gen
 import forecast
 import profit_optimizer
+import map_viz  # NEW IMPORT
 
 # --- LOAD SECRETS ---
 load_dotenv()
@@ -170,7 +171,7 @@ partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0,
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 LSP Digital Twin | v3.1.0 Resilience Module")
+st.sidebar.caption("🟢 LSP Digital Twin | v3.2.0 GeoSpatial")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.info(
@@ -178,9 +179,9 @@ st.sidebar.info(
     **LSP Optimization Engine**
 
     *Research Modules:*
+    * 📍 **Geospatial Network Control**
     * 🌪️ **Disruption Simulation**
     * 🤝 **Horizontal Capacity Sharing**
-    * 📉 **Newsvendor Risk Model**
     """
 )
 
@@ -286,6 +287,19 @@ if df is not None and not df.empty:
         with tab1:
             st.subheader(f"Operations Analysis: {metrics['product_name']}")
 
+            # --- MAP VISUALIZATION ---
+            with st.container(border=True):
+                map_fig = map_viz.render_map(
+                    metrics['product_name'],
+                    is_disrupted=disruption_mode,
+                    outsourced_vol=metrics['outsourced']
+                )
+                if map_fig:
+                    st.plotly_chart(map_fig, use_container_width=True)
+                else:
+                    st.info("🗺️ Select a valid Route (e.g., BER-MUC) to visualize network topology.")
+            # -------------------------
+
             # Forecast
             f_df = None
             forecast_text = ""
@@ -312,7 +326,7 @@ if df is not None and not df.empty:
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Total Throughput", f"{int(total_workload)}", f"+{int(reverse_logistics_vol)} Returns")
 
-            # Resilience with Color Logic
+            # Resilience
             res_delta = "off"
             if metrics['resilience_score'] < 50: res_delta = "- Critical Vulnerability"
             c2.metric("Network Resilience", f"{metrics['resilience_score']}/100",
@@ -324,7 +338,7 @@ if df is not None and not df.empty:
             else:
                 c3.metric("Capacity Status", "Optimal", "100% Internal")
 
-            # Safety Stock Highlight in Shock Mode
+            # Safety Stock
             delta_msg = "Surge!" if disruption_mode else "Pallets"
             delta_col = "inverse" if disruption_mode else "off"
             c4.metric("Safety Buffer", f"{metrics['safety_stock']}", delta=delta_msg, delta_color=delta_col)
@@ -375,7 +389,7 @@ if df is not None and not df.empty:
 
 # --- FOOTER ---
 st.markdown("---")
-st.caption(f"© 2026 Logistics Research Lab | v3.1.0 | Stress Test Module Active")
+st.caption(f"© 2026 Logistics Research Lab | v3.2.0 | Geospatial Module Active")
 
 if source_option == "🔌 Live WMS Database" and df is not None:
     with st.expander("🔍 Inspect Warehouse Logs"):
