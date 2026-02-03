@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from datetime import date
 from dotenv import load_dotenv
 
-# Import Custom Logic Modules
+# --- IMPORT CUSTOM LOGIC MODULES ---
 import config
 import db_manager
 import inventory_math
@@ -12,8 +12,8 @@ import ai_brain
 import report_gen
 import forecast
 import profit_optimizer
-import map_viz
-import monte_carlo  # NEW IMPORT
+import map_viz  # Handles the Geospatial Map
+import monte_carlo  # Handles the Stochastic Risk Simulation
 
 # --- LOAD SECRETS ---
 load_dotenv()
@@ -42,13 +42,13 @@ def render_chat_ui(df, metrics, extra_context="", key="default_chat"):
         for msg in st.session_state.messages:
             st.chat_message(msg["role"]).markdown(msg["content"])
 
-    if prompt := st.chat_input("Ask about Green Logistics, Risk, or Profit...", key=key):
+    if prompt := st.chat_input("Ask about Modal Shift, CO2, or Risk...", key=key):
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with chat_container:
             st.chat_message("user").markdown(prompt)
 
-            with st.spinner("Analyzing Logistics Network..."):
+            with st.spinner("Simulating Multi-Modal Network..."):
                 full_query = f"{prompt}\n\n[CONTEXT OVERRIDE: {extra_context}]"
                 history = [{"role": m["role"], "parts": [m["content"]]} for m in st.session_state.messages]
                 response = ai_brain.chat_with_data(full_query, history, df, metrics)
@@ -128,9 +128,32 @@ st.sidebar.markdown("---")
 # 2. PARAMETERS (LSP Operations)
 st.sidebar.header("🔧 LSP Constraints")
 
+# --- MULTI-MODAL SELECTOR (v3.5) ---
+st.sidebar.subheader("🚚 Transport Mode")
+transport_mode = st.sidebar.selectbox(
+    "Select Mode:",
+    ["Road (Standard)", "Rail (Green/Slow)", "Air (Express/Costly)"]
+)
+
+# Mode Logic Multipliers (The "Trade-offs")
+time_mult = 1.0
+cost_mult = 1.0
+co2_mult = 1.0
+
+if "Rail" in transport_mode:
+    time_mult = 1.5  # Rail is Slower
+    cost_mult = 0.7  # Rail is Cheaper
+    co2_mult = 0.3  # Rail is Greener
+elif "Air" in transport_mode:
+    time_mult = 0.2  # Air is Fast
+    cost_mult = 3.0  # Air is Expensive
+    co2_mult = 5.0  # Air is Dirty
+# ----------------------------------------
+
 # Financials
 st.sidebar.subheader("💰 Unit Economics")
-uc = st.sidebar.number_input("Handling Cost ($)", value=50.0)
+base_uc = st.sidebar.number_input("Base Handling Cost ($)", value=50.0)
+uc = base_uc * cost_mult  # Apply Mode Multiplier to Cost
 sp = st.sidebar.number_input("Service Revenue ($)", value=85.0)
 
 # --- STRESS TEST MODULE ---
@@ -140,23 +163,22 @@ disruption_mode = st.sidebar.checkbox("🔥 Simulate Supplier Shock",
 
 if disruption_mode:
     st.sidebar.error("⚠️ SHOCK EVENT ACTIVE")
-    holding_cost = st.sidebar.number_input("Warehousing Cost ($/pallet)", value=config.HOLDING_COST)
-    stockout_cost = st.sidebar.number_input("SLA Penalty Cost ($/pallet)", value=config.STOCKOUT_COST)
-
-    # Visual feedback only
-    st.sidebar.slider("Lead Time (Months)", 0.5, 6.0, 3.0, disabled=True)
-    st.sidebar.slider("Supply Variance (σ_LT)", 0.0, 2.0, 1.5, disabled=True)
-
-    # Actual values passed to engine
-    lead_time_months = 3.0
+    # Shock overrides Mode logic slightly (everything gets worse)
+    lead_time_months = 3.0 * time_mult
     lead_time_volatility = 1.5
+    holding_cost = config.HOLDING_COST * 1.5  # Costs rise during shock
 
 else:
     # Normal Mode
     holding_cost = st.sidebar.number_input("Warehousing Cost ($/pallet)", value=config.HOLDING_COST)
-    stockout_cost = st.sidebar.number_input("SLA Penalty Cost ($/pallet)", value=config.STOCKOUT_COST)
-    lead_time_months = st.sidebar.slider("Lead Time (Months)", 0.5, 6.0, 1.0, 0.5)
+    base_lt = st.sidebar.slider("Base Lead Time (Months)", 0.5, 6.0, 1.0, 0.5)
+
+    # Apply Mode Multiplier to Time
+    lead_time_months = base_lt * time_mult
+
     lead_time_volatility = st.sidebar.slider("Supply Variance (σ_LT)", 0.0, 2.0, 0.2, 0.1)
+
+stockout_cost = st.sidebar.number_input("SLA Penalty Cost ($/pallet)", value=config.STOCKOUT_COST)
 
 # Reverse Logistics Logic
 return_rate = st.sidebar.slider("Return Rate % (Reverse Logistics)", 0, 30, 5, 1,
@@ -171,18 +193,20 @@ partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0,
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 LSP Digital Twin | v3.4.0 Stochastic Edition")
+st.sidebar.caption("🟢 LSP Digital Twin | v3.5.0 Multi-Modal Edition")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.info(
-    """
-    **LSP Optimization Engine**
+    f"""
+    **Current Strategy: {transport_mode}**
+    * Lead Time Factor: x{time_mult}
+    * Cost Factor: x{cost_mult}
+    * CO2 Factor: x{co2_mult}
 
-    *Research Modules:*
-    * 🎲 **Monte Carlo Simulation**
-    * 🌿 **Green Logistics (CO₂)**
-    * ❤️ **Customer Loyalty Index**
-    * 📍 **Geospatial Control Tower**
+    **Research Modules:**
+    * 🎲 Monte Carlo Risk
+    * 📍 Geospatial Control
+    * 🌿 Green Logistics
     """
 )
 
@@ -262,8 +286,11 @@ if df is not None and not df.empty:
 
     loyalty_score = inventory_math.calculate_loyalty_index(sim_sla / 100.0, service_metrics["reliability_score"])
 
-    # 6. GREEN LOGISTICS
+    # 6. GREEN LOGISTICS (Applied Mode Multiplier)
     green_metrics = inventory_math.calculate_sustainability_impact(internal_vol, outsourced_vol)
+    # Apply Mode Multiplier to CO2
+    green_metrics["total_emissions"] = round(green_metrics["total_emissions"] * co2_mult, 2)
+    green_metrics["co2_saved"] = round(green_metrics["co2_saved"] * co2_mult, 2)
 
     metrics = {
         "avg_demand": int(total_workload),
@@ -283,7 +310,8 @@ if df is not None and not df.empty:
         "stockout_cost": stockout_cost,
         "loyalty_score": loyalty_score,
         "co2_emissions": green_metrics["total_emissions"],
-        "co2_saved": green_metrics["co2_saved"]
+        "co2_saved": green_metrics["co2_saved"],
+        "transport_mode": transport_mode  # Passed for AI context
     }
     metrics.update(service_metrics)
 
@@ -295,18 +323,22 @@ if df is not None and not df.empty:
 
         # --- TAB 1: LOGISTICS HUB ---
         with tab1:
-            st.subheader(f"Operations Analysis: {metrics['product_name']}")
+            st.subheader(f"Operations: {metrics['product_name']} | Mode: {transport_mode}")
 
+            # --- MAP VISUALIZATION ---
             with st.container(border=True):
+                # Pass Mode to Map Viz
                 map_fig = map_viz.render_map(
                     metrics['product_name'],
                     is_disrupted=disruption_mode,
-                    outsourced_vol=metrics['outsourced']
+                    outsourced_vol=metrics['outsourced'],
+                    transport_mode=transport_mode
                 )
                 if map_fig:
                     st.plotly_chart(map_fig, use_container_width=True)
                 else:
                     st.info("🗺️ Select a valid Route (e.g., BER-MUC) to visualize network topology.")
+            # -------------------------
 
             f_df = None
             forecast_text = ""
@@ -315,25 +347,29 @@ if df is not None and not df.empty:
                 if f_df is not None:
                     forecast_text = f"Projected demand trend: {f_df.head(5)['demand'].tolist()}"
 
+            # Chart
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=df['date'], y=df['demand'], mode='lines+markers', name='Outbound Flow',
                                      line=dict(color='#2ca02c', width=3)))
             fig.add_hline(y=warehouse_cap, line_dash="dot", line_color="red", annotation_text="Internal Capacity Limit")
+
             if f_df is not None:
                 last_pt = pd.DataFrame({'date': [df['date'].max()], 'demand': [df.iloc[-1]['demand']]})
                 combined_f = pd.concat([last_pt, f_df])
                 fig.add_trace(go.Scatter(x=combined_f['date'], y=combined_f['demand'], mode='lines', name='Forecast',
                                          line=dict(dash='dash', color='blue')))
+
             st.plotly_chart(fig, use_container_width=True)
 
-            # KPIS
+            # KPI ROW 1
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Total Throughput", f"{int(total_workload)}", f"+{int(reverse_logistics_vol)} Returns")
 
             res_delta = "off"
             if metrics['resilience_score'] < 50: res_delta = "- Critical Vulnerability"
             c2.metric("Network Resilience", f"{metrics['resilience_score']}/100",
-                      res_delta if disruption_mode else "Risk Robustness")
+                      res_delta if disruption_mode else "Risk Robustness",
+                      delta_color="normal" if metrics['resilience_score'] > 50 else "inverse")
 
             if outsourced_vol > 0:
                 c3.metric("⚠️ Partner Dependency", f"{metrics['dependency_ratio']}%",
@@ -347,19 +383,27 @@ if df is not None and not df.empty:
 
             st.divider()
 
-            # STRATEGIC SCORECARD
+            # --- STRATEGIC SCORECARD (ROW 2) ---
             st.markdown("#### 🌍 Strategic Scorecard (Triple Bottom Line)")
             k1, k2, k3, k4 = st.columns(4)
-            if green_metrics["co2_saved"] > 0:
-                k1.metric("🌿 Sustainability", "Optimized", f"-{green_metrics['co2_saved']} kg CO₂ Saved")
-            else:
-                k1.metric("🌿 Sustainability", "Standard", "No Sharing Gains", delta_color="off")
-            k2.metric("Total Emissions", f"{green_metrics['total_emissions']} kg", "Scope 3 (Est.)")
+
+            # Green Logic Visuals
+            green_label = "Standard"
+            if "Rail" in transport_mode:
+                green_label = "Eco-Mode"
+            elif "Air" in transport_mode:
+                green_label = "High Carbon"
+
+            k1.metric("🌿 Sustainability", green_label, f"{green_metrics['total_emissions']} kg CO₂ (Est.)",
+                      delta_color="inverse" if "Air" in transport_mode else "normal")
+            k2.metric("CO₂ Saved (vs Road)", f"{green_metrics['co2_saved']} kg", "Mode Shift Impact")
 
             loyalty_delta = f"Goal Exceeded (+{round(service_metrics['reliability_score'] - sim_sla, 1)}%)" if \
             service_metrics['reliability_score'] >= sim_sla else "SLA Breach"
             k3.metric("❤️ Customer Loyalty", f"{loyalty_score}/100", loyalty_delta)
+
             k4.metric("Reliability (Fill Rate)", f"{service_metrics['reliability_score']}%", f"Target: {sim_sla}%")
+            # ---------------------------------------------
 
             st.divider()
             col_pdf1, col_pdf2 = st.columns([1, 4])
@@ -367,14 +411,18 @@ if df is not None and not df.empty:
                 if st.button("📄 Generate Research Report"):
                     with st.spinner("Compiling Resilience & Cooperation Data..."):
                         summary = ai_brain.chat_with_data(
-                            f"Write a strategic executive summary for service lane {metrics['product_name']}. Focus on resilience and capacity sharing.",
+                            f"Write a strategic executive summary for service lane {metrics['product_name']}. Focus on Mode: {transport_mode} and Resilience.",
                             [], df, metrics
                         )
                         pdf_bytes = report_gen.generate_pdf(metrics, summary)
-                        st.download_button("⬇️ Download PDF Artifact", pdf_bytes,
-                                           f"LSP_Report_{metrics['product_name']}.pdf", "application/pdf")
+                        st.download_button(
+                            label="⬇️ Download PDF Artifact",
+                            data=pdf_bytes,
+                            file_name=f"LSP_Report_{metrics['product_name']}.pdf",
+                            mime="application/pdf"
+                        )
 
-            ai_context = f"Analysis for LSP. Total Load: {total_workload}. Warehouse Cap: {warehouse_cap}. CO2: {green_metrics['total_emissions']}. Loyalty: {loyalty_score}. SHOCK: {disruption_mode}"
+            ai_context = f"Analysis for LSP. Total Load: {total_workload}. Warehouse Cap: {warehouse_cap}. Mode: {transport_mode}. CO2: {green_metrics['total_emissions']}. Loyalty: {loyalty_score}. SHOCK: {disruption_mode}"
             render_chat_ui(df, metrics, extra_context=ai_context, key="ops_chat")
 
         # --- TAB 2: FINANCIAL ENGINE ---
@@ -382,7 +430,7 @@ if df is not None and not df.empty:
             st.subheader("💰 Financial Optimization")
 
             if sp > uc:
-                # 1. Standard Deterministic Charts
+                # 1. Deterministic Charts
                 c_chart1, c_chart2 = st.columns(2)
                 with c_chart1:
                     st.markdown("#### 📉 Cost Convexity")
@@ -397,17 +445,16 @@ if df is not None and not df.empty:
 
                 st.divider()
 
-                # 2. NEW: Monte Carlo Simulation (Stochastic)
+                # 2. Monte Carlo Simulation (Stochastic)
                 st.markdown("### 🎲 Monte Carlo Risk Engine")
                 st.caption(
                     f"Running 1,000 stochastic iterations based on Demand σ={metrics['std_dev']} and Lead Time σ_LT={lead_time_volatility}")
 
                 # Run Simulation
-                # Use total_required_capacity as the 'limit' for sales to see if we over/under stocked
                 sim_fig, sim_metrics = monte_carlo.run_simulation(
                     avg_demand=total_workload,
                     std_dev=std_dev_demand,
-                    capacity_limit=total_required_capacity,  # Use the computed stock level
+                    capacity_limit=total_required_capacity,
                     unit_cost=uc,
                     selling_price=sp,
                     holding_cost=holding_cost,
@@ -430,7 +477,7 @@ if df is not None and not df.empty:
 
 # --- FOOTER ---
 st.markdown("---")
-st.caption(f"© 2026 Logistics Research Lab | v3.4.0 | Stochastic Edition (Monte Carlo)")
+st.caption(f"© 2026 Logistics Research Lab | v3.5.0 | Multi-Modal Strategic Edition")
 
 if source_option == "🔌 Live WMS Database" and df is not None:
     with st.expander("🔍 Inspect Warehouse Logs"):

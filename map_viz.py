@@ -1,7 +1,6 @@
 import plotly.graph_objects as go
 
 # Hardcoded coordinates for the demo scenarios
-# This ensures it works perfectly offline without needing a Geocoding API
 LOCATIONS = {
     "BER": {"lat": 52.5200, "lon": 13.4050, "name": "Berlin (Hub)"},
     "MUC": {"lat": 48.1351, "lon": 11.5820, "name": "Munich (Dest)"},
@@ -12,77 +11,82 @@ LOCATIONS = {
 }
 
 
-def render_map(route_name, is_disrupted=False, outsourced_vol=0):
+def render_map(route_name, is_disrupted=False, outsourced_vol=0, transport_mode="Road"):
     """
-    Draws a connection map for the selected service lane.
-    Colors the line RED if disrupted, GREEN if optimal.
+    Draws a connection map.
+    Visuals change based on:
+    1. Disruption (Red)
+    2. Outsourcing (Orange)
+    3. Transport Mode (Line Style: Solid/Dash/Dot)
     """
 
-    # 1. Parse the Route (e.g., "BER-MUC")
+    # 1. Parse Route
     try:
-        # Extract 3-letter codes
         origin_code = route_name[:3].upper()
         dest_code = route_name[4:7].upper()
-
         start = LOCATIONS.get(origin_code)
         end = LOCATIONS.get(dest_code)
-
-        if not start or not end:
-            return None  # Skip map if codes don't match known cities
-
+        if not start or not end: return None
     except:
         return None
 
-    # 2. Define Visual Style based on Status
-    line_color = '#2ca02c'  # Green (Normal)
-    status_text = "Status: 🟢 Flowing"
+    # 2. Define Visual Style
+    line_color = '#2ca02c'  # Green (Standard)
+    line_dash = 'solid'  # Standard Truck
+    status_text = f"Mode: {transport_mode}"
 
+    # Mode Logic (Visuals)
+    if "Rail" in transport_mode:
+        line_dash = 'dash'  # Train tracks look
+        line_color = '#7f7f7f'  # Industrial Grey/Black
+    elif "Air" in transport_mode:
+        line_dash = 'dot'  # Flight path look
+        line_color = '#1f77b4'  # Sky Blue
+
+    # Override for Events
     if is_disrupted:
         line_color = '#d62728'  # Red (Shock)
-        status_text = "Status: 🔴 DISRUPTED (Port Strike)"
+        status_text += " | 🔴 DISRUPTED"
     elif outsourced_vol > 0:
         line_color = '#ff7f0e'  # Orange (Overflow)
-        status_text = "Status: 🟡 Overflow > Partner Network"
+        status_text += " | 🟡 Horizontal Coop Active"
 
-    # 3. Build the Plotly Map
+    # 3. Build Plotly Map
     fig = go.Figure()
 
-    # Draw the Route Line
+    # Route Line
     fig.add_trace(go.Scattergeo(
         lon=[start['lon'], end['lon']],
         lat=[start['lat'], end['lat']],
         mode='lines',
-        line=dict(width=4, color=line_color),
-        name='Service Lane',
-        hoverinfo='none'
+        line=dict(width=3, color=line_color, dash=line_dash),
+        name=transport_mode,
+        hoverinfo='text',
+        text=status_text
     ))
 
-    # Draw the Nodes (Cities)
+    # Hub Nodes
     fig.add_trace(go.Scattergeo(
         lon=[start['lon'], end['lon']],
         lat=[start['lat'], end['lat']],
         mode='markers+text',
         text=[start['name'], end['name']],
         textposition=["top center", "bottom center"],
-        marker=dict(size=12, color='#1f77b4', line=dict(width=2, color='white')),
+        marker=dict(size=10, color='#333', line=dict(width=1, color='white')),
         name='Hubs'
     ))
 
-    # 4. Map Layout (Focused on Europe)
     fig.update_layout(
-        title_text=f"📍 Network Visibility: {route_name} | {status_text}",
+        title_text=f"📍 Network: {route_name} [{transport_mode}]",
         geo=dict(
             scope='europe',
             projection_type='mercator',
             showland=True,
             landcolor="rgb(250, 250, 250)",
-            subunitcolor="rgb(217, 217, 217)",
-            countrycolor="rgb(217, 217, 217)",
-            countrywidth=0.5,
-            subunitwidth=0.5
+            countrycolor="rgb(200, 200, 200)",
         ),
-        margin={"r": 0, "t": 40, "l": 0, "b": 0},
-        height=350
+        margin={"r": 0, "t": 30, "l": 0, "b": 0},
+        height=300
     )
 
     return fig
