@@ -1,24 +1,18 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
-
 name: Digital Capacity CI
 
+# TRIGGER LOGIC: Runs automatically on every push to 'main'
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  # --- THE FIX: This enables the manual "Run Workflow" button ---
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
 
@@ -32,8 +26,7 @@ jobs:
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    # Make sure 'test_suite.py' actually exists in your repo,
-    # otherwise this step will fail.
     - name: Test with unittest
       run: |
-        if [ -f test_suite.py ]; then python test_suite.py; else echo "No test_suite.py found, skipping tests"; fi
+        if [ -f test_suite.py ]; then python test_suite.py; else echo "No tests found"; fi
+# Triggering CI Run
