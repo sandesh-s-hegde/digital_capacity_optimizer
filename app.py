@@ -12,7 +12,7 @@ import ai_brain
 import report_gen
 import forecast
 import profit_optimizer
-import map_viz  # NEW IMPORT
+import map_viz  # KEEPING THE MAP
 
 # --- LOAD SECRETS ---
 load_dotenv()
@@ -41,7 +41,7 @@ def render_chat_ui(df, metrics, extra_context="", key="default_chat"):
         for msg in st.session_state.messages:
             st.chat_message(msg["role"]).markdown(msg["content"])
 
-    if prompt := st.chat_input("Ask about capacity sharing, risk, or profit...", key=key):
+    if prompt := st.chat_input("Ask about Green Logistics, Loyalty, or Risk...", key=key):
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with chat_container:
@@ -143,11 +143,11 @@ if disruption_mode:
     holding_cost = st.sidebar.number_input("Warehousing Cost ($/pallet)", value=config.HOLDING_COST)
     stockout_cost = st.sidebar.number_input("SLA Penalty Cost ($/pallet)", value=config.STOCKOUT_COST)
 
-    # Visual feedback only - logic uses multipliers below
+    # Visual feedback only
     st.sidebar.slider("Lead Time (Months)", 0.5, 6.0, 3.0, disabled=True)
     st.sidebar.slider("Supply Variance (σ_LT)", 0.0, 2.0, 1.5, disabled=True)
 
-    # The actual values passed to the math engine
+    # Actual values passed to engine
     lead_time_months = 3.0
     lead_time_volatility = 1.5
 
@@ -171,7 +171,7 @@ partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0,
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 LSP Digital Twin | v3.2.0 GeoSpatial")
+st.sidebar.caption("🟢 LSP Digital Twin | v3.3.0 Strategic Edition")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.info(
@@ -179,9 +179,10 @@ st.sidebar.info(
     **LSP Optimization Engine**
 
     *Research Modules:*
-    * 📍 **Geospatial Network Control**
+    * 🌿 **Green Logistics (CO₂)**
+    * ❤️ **Customer Loyalty Index**
+    * 📍 **Geospatial Control Tower**
     * 🌪️ **Disruption Simulation**
-    * 🤝 **Horizontal Capacity Sharing**
     """
 )
 
@@ -241,6 +242,7 @@ if df is not None and not df.empty:
         total_required_capacity, warehouse_cap, partner_cost, holding_cost
     )
     outsourced_vol = cooperation_metrics["overflow_vol"]
+    internal_vol = cooperation_metrics["internal_vol"]
     dependency_pct = cooperation_metrics["dependency_ratio"]
 
     # 4. RESILIENCE
@@ -249,6 +251,21 @@ if df is not None and not df.empty:
     resilience_score = inventory_math.calculate_resilience_score(
         sim_safety_stock, combined_volatility_est, dependency_pct
     )
+
+    # 5. SERVICE & LOYALTY (NEW v3.3)
+    # Calculate Service implications first
+    try:
+        service_metrics = inventory_math.calculate_service_implications(
+            total_workload, std_dev_demand, sim_sla / 100.0, stockout_cost
+        )
+    except:
+        service_metrics = {"reliability_score": 100, "penalty_cost": 0}
+
+    # Calculate Loyalty based on Reliability
+    loyalty_score = inventory_math.calculate_loyalty_index(sim_sla / 100.0, service_metrics["reliability_score"])
+
+    # 6. GREEN LOGISTICS (NEW v3.3)
+    green_metrics = inventory_math.calculate_sustainability_impact(internal_vol, outsourced_vol)
 
     metrics = {
         "avg_demand": int(total_workload),
@@ -265,17 +282,15 @@ if df is not None and not df.empty:
         "unit_cost": uc,
         "selling_price": sp,
         "holding_cost": holding_cost,
-        "stockout_cost": stockout_cost
+        "stockout_cost": stockout_cost,
+        # NEW METRICS
+        "loyalty_score": loyalty_score,
+        "co2_emissions": green_metrics["total_emissions"],
+        "co2_saved": green_metrics["co2_saved"]
     }
 
-    # Service Logic Integration
-    try:
-        service_metrics = inventory_math.calculate_service_implications(
-            metrics["avg_demand"], metrics["std_dev"], metrics["sla"], stockout_cost
-        )
-        metrics.update(service_metrics)
-    except:
-        metrics.update({"reliability_score": "N/A", "penalty_cost": "N/A"})
+    # Update metrics with service data
+    metrics.update(service_metrics)
 
     if source_option == "🔌 Live WMS Database" and not selected_sku:
         st.warning("Please select a Service Lane.")
@@ -287,7 +302,7 @@ if df is not None and not df.empty:
         with tab1:
             st.subheader(f"Operations Analysis: {metrics['product_name']}")
 
-            # --- MAP VISUALIZATION ---
+            # --- MAP VISUALIZATION (PRESERVED) ---
             with st.container(border=True):
                 map_fig = map_viz.render_map(
                     metrics['product_name'],
@@ -298,7 +313,7 @@ if df is not None and not df.empty:
                     st.plotly_chart(map_fig, use_container_width=True)
                 else:
                     st.info("🗺️ Select a valid Route (e.g., BER-MUC) to visualize network topology.")
-            # -------------------------
+            # -------------------------------------
 
             # Forecast
             f_df = None
@@ -322,7 +337,7 @@ if df is not None and not df.empty:
 
             st.plotly_chart(fig, use_container_width=True)
 
-            # Metrics
+            # KPI ROW 1: OPERATIONS (PRESERVED)
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Total Throughput", f"{int(total_workload)}", f"+{int(reverse_logistics_vol)} Returns")
 
@@ -343,6 +358,29 @@ if df is not None and not df.empty:
             delta_col = "inverse" if disruption_mode else "off"
             c4.metric("Safety Buffer", f"{metrics['safety_stock']}", delta=delta_msg, delta_color=delta_col)
 
+            st.divider()
+
+            # --- NEW ROW 2: STRATEGIC SCORECARD (v3.3) ---
+            st.markdown("#### 🌍 Strategic Scorecard (Triple Bottom Line)")
+            k1, k2, k3, k4 = st.columns(4)
+
+            # Green Logic
+            if green_metrics["co2_saved"] > 0:
+                k1.metric("🌿 Sustainability", "Optimized", f"-{green_metrics['co2_saved']} kg CO₂ Saved")
+            else:
+                k1.metric("🌿 Sustainability", "Standard", "No Sharing Gains", delta_color="off")
+
+            k2.metric("Total Emissions", f"{green_metrics['total_emissions']} kg", "Scope 3 (Est.)")
+
+            # Loyalty Logic
+            loyalty_delta = f"Goal Exceeded (+{round(service_metrics['reliability_score'] - sim_sla, 1)}%)" if \
+            service_metrics['reliability_score'] >= sim_sla else "SLA Breach"
+            k3.metric("❤️ Customer Loyalty", f"{loyalty_score}/100", loyalty_delta)
+
+            # Reliability
+            k4.metric("Reliability (Fill Rate)", f"{service_metrics['reliability_score']}%", f"Target: {sim_sla}%")
+            # ---------------------------------------------
+
             # PDF Report
             st.divider()
             col_pdf1, col_pdf2 = st.columns([1, 4])
@@ -361,7 +399,7 @@ if df is not None and not df.empty:
                             mime="application/pdf"
                         )
 
-            ai_context = f"Analysis for Logistics Service Provider. Total Load: {total_workload}. Warehouse Cap: {warehouse_cap}. Forecast: {forecast_text}. SHOCK MODE: {disruption_mode}"
+            ai_context = f"Analysis for Logistics Service Provider. Total Load: {total_workload}. Warehouse Cap: {warehouse_cap}. CO2 Emissions: {green_metrics['total_emissions']}. Loyalty: {loyalty_score}. SHOCK MODE: {disruption_mode}"
             render_chat_ui(df, metrics, extra_context=ai_context, key="ops_chat")
 
         # --- TAB 2: FINANCIAL ENGINE ---
@@ -389,7 +427,7 @@ if df is not None and not df.empty:
 
 # --- FOOTER ---
 st.markdown("---")
-st.caption(f"© 2026 Logistics Research Lab | v3.2.0 | Geospatial Module Active")
+st.caption(f"© 2026 Logistics Research Lab | v3.3.0 | Strategic Edition (Green & Loyalty)")
 
 if source_option == "🔌 Live WMS Database" and df is not None:
     with st.expander("🔍 Inspect Warehouse Logs"):
