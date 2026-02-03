@@ -12,7 +12,8 @@ import ai_brain
 import report_gen
 import forecast
 import profit_optimizer
-import map_viz  # KEEPING THE MAP
+import map_viz
+import monte_carlo  # NEW IMPORT
 
 # --- LOAD SECRETS ---
 load_dotenv()
@@ -41,7 +42,7 @@ def render_chat_ui(df, metrics, extra_context="", key="default_chat"):
         for msg in st.session_state.messages:
             st.chat_message(msg["role"]).markdown(msg["content"])
 
-    if prompt := st.chat_input("Ask about Green Logistics, Loyalty, or Risk...", key=key):
+    if prompt := st.chat_input("Ask about Green Logistics, Risk, or Profit...", key=key):
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with chat_container:
@@ -139,7 +140,6 @@ disruption_mode = st.sidebar.checkbox("🔥 Simulate Supplier Shock",
 
 if disruption_mode:
     st.sidebar.error("⚠️ SHOCK EVENT ACTIVE")
-    # Force high values during shock
     holding_cost = st.sidebar.number_input("Warehousing Cost ($/pallet)", value=config.HOLDING_COST)
     stockout_cost = st.sidebar.number_input("SLA Penalty Cost ($/pallet)", value=config.STOCKOUT_COST)
 
@@ -171,7 +171,7 @@ partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0,
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 LSP Digital Twin | v3.3.0 Strategic Edition")
+st.sidebar.caption("🟢 LSP Digital Twin | v3.4.0 Stochastic Edition")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.info(
@@ -179,10 +179,10 @@ st.sidebar.info(
     **LSP Optimization Engine**
 
     *Research Modules:*
+    * 🎲 **Monte Carlo Simulation**
     * 🌿 **Green Logistics (CO₂)**
     * ❤️ **Customer Loyalty Index**
     * 📍 **Geospatial Control Tower**
-    * 🌪️ **Disruption Simulation**
     """
 )
 
@@ -252,8 +252,7 @@ if df is not None and not df.empty:
         sim_safety_stock, combined_volatility_est, dependency_pct
     )
 
-    # 5. SERVICE & LOYALTY (NEW v3.3)
-    # Calculate Service implications first
+    # 5. SERVICE & LOYALTY
     try:
         service_metrics = inventory_math.calculate_service_implications(
             total_workload, std_dev_demand, sim_sla / 100.0, stockout_cost
@@ -261,10 +260,9 @@ if df is not None and not df.empty:
     except:
         service_metrics = {"reliability_score": 100, "penalty_cost": 0}
 
-    # Calculate Loyalty based on Reliability
     loyalty_score = inventory_math.calculate_loyalty_index(sim_sla / 100.0, service_metrics["reliability_score"])
 
-    # 6. GREEN LOGISTICS (NEW v3.3)
+    # 6. GREEN LOGISTICS
     green_metrics = inventory_math.calculate_sustainability_impact(internal_vol, outsourced_vol)
 
     metrics = {
@@ -283,13 +281,10 @@ if df is not None and not df.empty:
         "selling_price": sp,
         "holding_cost": holding_cost,
         "stockout_cost": stockout_cost,
-        # NEW METRICS
         "loyalty_score": loyalty_score,
         "co2_emissions": green_metrics["total_emissions"],
         "co2_saved": green_metrics["co2_saved"]
     }
-
-    # Update metrics with service data
     metrics.update(service_metrics)
 
     if source_option == "🔌 Live WMS Database" and not selected_sku:
@@ -302,7 +297,6 @@ if df is not None and not df.empty:
         with tab1:
             st.subheader(f"Operations Analysis: {metrics['product_name']}")
 
-            # --- MAP VISUALIZATION (PRESERVED) ---
             with st.container(border=True):
                 map_fig = map_viz.render_map(
                     metrics['product_name'],
@@ -313,9 +307,7 @@ if df is not None and not df.empty:
                     st.plotly_chart(map_fig, use_container_width=True)
                 else:
                     st.info("🗺️ Select a valid Route (e.g., BER-MUC) to visualize network topology.")
-            # -------------------------------------
 
-            # Forecast
             f_df = None
             forecast_text = ""
             if st.checkbox("Show Demand Forecast", value=True):
@@ -323,25 +315,21 @@ if df is not None and not df.empty:
                 if f_df is not None:
                     forecast_text = f"Projected demand trend: {f_df.head(5)['demand'].tolist()}"
 
-            # Chart
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=df['date'], y=df['demand'], mode='lines+markers', name='Outbound Flow',
                                      line=dict(color='#2ca02c', width=3)))
             fig.add_hline(y=warehouse_cap, line_dash="dot", line_color="red", annotation_text="Internal Capacity Limit")
-
             if f_df is not None:
                 last_pt = pd.DataFrame({'date': [df['date'].max()], 'demand': [df.iloc[-1]['demand']]})
                 combined_f = pd.concat([last_pt, f_df])
                 fig.add_trace(go.Scatter(x=combined_f['date'], y=combined_f['demand'], mode='lines', name='Forecast',
                                          line=dict(dash='dash', color='blue')))
-
             st.plotly_chart(fig, use_container_width=True)
 
-            # KPI ROW 1: OPERATIONS (PRESERVED)
+            # KPIS
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Total Throughput", f"{int(total_workload)}", f"+{int(reverse_logistics_vol)} Returns")
 
-            # Resilience
             res_delta = "off"
             if metrics['resilience_score'] < 50: res_delta = "- Critical Vulnerability"
             c2.metric("Network Resilience", f"{metrics['resilience_score']}/100",
@@ -353,35 +341,26 @@ if df is not None and not df.empty:
             else:
                 c3.metric("Capacity Status", "Optimal", "100% Internal")
 
-            # Safety Stock
             delta_msg = "Surge!" if disruption_mode else "Pallets"
             delta_col = "inverse" if disruption_mode else "off"
             c4.metric("Safety Buffer", f"{metrics['safety_stock']}", delta=delta_msg, delta_color=delta_col)
 
             st.divider()
 
-            # --- NEW ROW 2: STRATEGIC SCORECARD (v3.3) ---
+            # STRATEGIC SCORECARD
             st.markdown("#### 🌍 Strategic Scorecard (Triple Bottom Line)")
             k1, k2, k3, k4 = st.columns(4)
-
-            # Green Logic
             if green_metrics["co2_saved"] > 0:
                 k1.metric("🌿 Sustainability", "Optimized", f"-{green_metrics['co2_saved']} kg CO₂ Saved")
             else:
                 k1.metric("🌿 Sustainability", "Standard", "No Sharing Gains", delta_color="off")
-
             k2.metric("Total Emissions", f"{green_metrics['total_emissions']} kg", "Scope 3 (Est.)")
 
-            # Loyalty Logic
             loyalty_delta = f"Goal Exceeded (+{round(service_metrics['reliability_score'] - sim_sla, 1)}%)" if \
             service_metrics['reliability_score'] >= sim_sla else "SLA Breach"
             k3.metric("❤️ Customer Loyalty", f"{loyalty_score}/100", loyalty_delta)
-
-            # Reliability
             k4.metric("Reliability (Fill Rate)", f"{service_metrics['reliability_score']}%", f"Target: {sim_sla}%")
-            # ---------------------------------------------
 
-            # PDF Report
             st.divider()
             col_pdf1, col_pdf2 = st.columns([1, 4])
             with col_pdf1:
@@ -392,14 +371,10 @@ if df is not None and not df.empty:
                             [], df, metrics
                         )
                         pdf_bytes = report_gen.generate_pdf(metrics, summary)
-                        st.download_button(
-                            label="⬇️ Download PDF Artifact",
-                            data=pdf_bytes,
-                            file_name=f"LSP_Resilience_Report_{metrics['product_name']}.pdf",
-                            mime="application/pdf"
-                        )
+                        st.download_button("⬇️ Download PDF Artifact", pdf_bytes,
+                                           f"LSP_Report_{metrics['product_name']}.pdf", "application/pdf")
 
-            ai_context = f"Analysis for Logistics Service Provider. Total Load: {total_workload}. Warehouse Cap: {warehouse_cap}. CO2 Emissions: {green_metrics['total_emissions']}. Loyalty: {loyalty_score}. SHOCK MODE: {disruption_mode}"
+            ai_context = f"Analysis for LSP. Total Load: {total_workload}. Warehouse Cap: {warehouse_cap}. CO2: {green_metrics['total_emissions']}. Loyalty: {loyalty_score}. SHOCK: {disruption_mode}"
             render_chat_ui(df, metrics, extra_context=ai_context, key="ops_chat")
 
         # --- TAB 2: FINANCIAL ENGINE ---
@@ -407,27 +382,55 @@ if df is not None and not df.empty:
             st.subheader("💰 Financial Optimization")
 
             if sp > uc:
-                st.markdown("#### 📉 Cost-Service Convexity")
-                try:
+                # 1. Standard Deterministic Charts
+                c_chart1, c_chart2 = st.columns(2)
+                with c_chart1:
+                    st.markdown("#### 📉 Cost Convexity")
                     st.plotly_chart(profit_optimizer.plot_cost_tradeoff(
                         total_workload, std_dev_demand, holding_cost, stockout_cost, uc, sp
                     ), use_container_width=True)
-                except:
-                    st.warning("Update profit_optimizer.py for charts")
+                with c_chart2:
+                    st.markdown("#### 🗺️ Risk Heatmap")
+                    st.plotly_chart(profit_optimizer.calculate_profit_scenarios(
+                        total_workload, std_dev_demand, holding_cost, stockout_cost, uc, sp
+                    ), use_container_width=True)
 
-                st.markdown("#### 🗺️ Risk Sensitivity")
-                st.plotly_chart(profit_optimizer.calculate_profit_scenarios(
-                    total_workload, std_dev_demand, holding_cost, stockout_cost, uc, sp
-                ), use_container_width=True)
+                st.divider()
 
-                st.info(f"💡 The AI Analyst can now explain these charts directly.")
-                render_chat_ui(df, metrics, extra_context="User is looking at Profit Heatmaps.", key="fin_chat")
+                # 2. NEW: Monte Carlo Simulation (Stochastic)
+                st.markdown("### 🎲 Monte Carlo Risk Engine")
+                st.caption(
+                    f"Running 1,000 stochastic iterations based on Demand σ={metrics['std_dev']} and Lead Time σ_LT={lead_time_volatility}")
+
+                # Run Simulation
+                # Use total_required_capacity as the 'limit' for sales to see if we over/under stocked
+                sim_fig, sim_metrics = monte_carlo.run_simulation(
+                    avg_demand=total_workload,
+                    std_dev=std_dev_demand,
+                    capacity_limit=total_required_capacity,  # Use the computed stock level
+                    unit_cost=uc,
+                    selling_price=sp,
+                    holding_cost=holding_cost,
+                    stockout_cost=stockout_cost
+                )
+
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Expected Profit (Mean)", f"${sim_metrics['avg_profit']}", "Avg Outcome")
+                m2.metric("Loss Probability", f"{sim_metrics['loss_prob']}%", "Chance of $ < 0", delta_color="inverse")
+                m3.metric("Value at Risk (VaR 95%)", f"${sim_metrics['var_95']}", "Worst Case Scenario",
+                          delta_color="off")
+
+                st.plotly_chart(sim_fig, use_container_width=True)
+
+                render_chat_ui(df, metrics,
+                               extra_context=f"Monte Carlo Results: Avg Profit ${sim_metrics['avg_profit']}, VaR ${sim_metrics['var_95']}",
+                               key="fin_chat")
             else:
                 st.error("Revenue must exceed Cost.")
 
 # --- FOOTER ---
 st.markdown("---")
-st.caption(f"© 2026 Logistics Research Lab | v3.3.0 | Strategic Edition (Green & Loyalty)")
+st.caption(f"© 2026 Logistics Research Lab | v3.4.0 | Stochastic Edition (Monte Carlo)")
 
 if source_option == "🔌 Live WMS Database" and df is not None:
     with st.expander("🔍 Inspect Warehouse Logs"):
