@@ -3,22 +3,24 @@ message: "If you use this software in your research, please cite it as below."
 authors:
 - family-names: "Hegde"
   given-names: "Sandesh Subramanya"
-title: "LSP Digital Capacity Twin: Stochastic Optimization Engine"
-version: 3.0.0
-date-released: 2026-02-01
+title: "LSP Digital Capacity Twin: Multi-Modal Stochastic Engine"
+version: 3.5.0
+date-released: 2026-02-04
 url: "https://github.com/sandesh-s-hegde/digital_capacity_optimizer"
-abstract: "A Decision Support System (DSS) for Logistics Service Providers operationalizing supply chain resilience and horizontal cooperation. The artifact models capacity sharing strategies, reverse logistics volatility, and stochastic inventory risks using a 'Newsvendor' optimization framework."
+abstract: "A Decision Support System (DSS) for Logistics Service Providers operationalizing supply chain resilience, horizontal cooperation, and multi-modal transport strategy. The artifact incorporates a Monte Carlo risk engine, carbon emission tracking (Green Logistics), and dynamic 'Newsvendor' optimization to balance profit, speed, and sustainability."
 keywords:
   - "Logistics Service Providers"
   - "Supply Chain Resilience"
+  - "Multi-Modal Transport"
+  - "Monte Carlo Simulation"
+  - "Green Logistics"
   - "Horizontal Cooperation"
-  - "Stochastic Optimization"
   - "Digital Twin"
 preferred-citation:
   type: software
   authors:
   - family-names: "Hegde"
     given-names: "Sandesh Subramanya"
-  title: "LSP Digital Capacity Twin: Stochastic Optimization Engine"
+  title: "LSP Digital Capacity Twin: Multi-Modal Stochastic Engine"
   year: 2026
-  version: 3.0.0
+  version: 3.5.0
