@@ -1,7 +1,7 @@
 from fpdf import FPDF
 import matplotlib
 
-matplotlib.use('Agg')
+matplotlib.use('Agg')  # Force non-interactive backend
 import matplotlib.pyplot as plt
 import numpy as np
 import tempfile
@@ -10,7 +10,6 @@ import os
 
 class AcademicReport(FPDF):
     def header(self):
-        # Academic Header
         self.set_font('Arial', 'B', 12)
         self.cell(0, 10, 'LSP DIGITAL TWIN | RESEARCH ARTIFACT', 0, 1, 'C')
         self.set_font('Arial', 'I', 8)
@@ -38,27 +37,34 @@ def generate_pdf(metrics, ai_summary):
     pdf = AcademicReport()
     pdf.add_page()
 
-    # 1. EXECUTIVE SUMMARY (The AI Brain)
-    pdf.chapter_title("1. EXECUTIVE STRATEGIC SUMMARY")
+    # 1. EXECUTIVE STRATEGIC SUMMARY
+    pdf.chapter_title("1. EXECUTIVE STRATEGIC SUMMARY & RECOMMENDATIONS")
     pdf.chapter_body(ai_summary)
 
-    # 2. OPERATIONAL METRICS GRID
-    pdf.chapter_title("2. OPERATIONAL PARAMETERS")
-    pdf.set_font('Courier', '', 10)
+    # 2. COMPREHENSIVE METRICS GRID
+    pdf.chapter_title("2. OPERATIONAL & STRATEGIC METRICS")
+    pdf.set_font('Courier', '', 9)  # Slightly smaller font to fit more rows
 
-    # Create a clean data table layout
     col_width = pdf.w / 2.2
-    row_height = 8
+    row_height = 7
 
+    # FULL METRICS LIST (Matches Dashboard)
     data = [
         ("Service Lane", str(metrics.get('product_name', 'N/A'))),
         ("Transport Mode", str(metrics.get('transport_mode', 'Road'))),
-        ("Average Demand", f"{metrics['avg_demand']} units"),
-        ("Standard Deviation", f"{metrics['std_dev']} units"),
+        ("Avg Demand (Base)", f"{metrics['avg_demand']} units"),
+        ("Return Volume", f"{metrics['return_vol']} units"),  # Added
+        ("Total Throughput", f"{metrics['avg_demand'] + metrics['return_vol']} units"),  # Added
+        ("Std Dev (Volatility)", f"{metrics['std_dev']} units"),
         ("Optimal Safety Stock", f"{metrics['safety_stock']} units"),
         ("Target Service Level", f"{metrics['sla']:.1%}"),
+        ("Fill Rate Reliability", f"{metrics.get('reliability_score', 0):.1f}%"),  # Added
+        ("Partner Dependency", f"{metrics['dependency_ratio']:.1f}%"),  # Added
+        ("Outsourced Volume", f"{metrics.get('outsourced', 0)} units"),  # Added
+        ("Resilience Score", f"{metrics.get('resilience_score', 0)}/100"),
+        ("Customer Loyalty", f"{metrics['loyalty_score']}/100"),  # Added
         ("Est. CO2 Emissions", f"{metrics.get('co2_emissions', 0)} kg"),
-        ("Resilience Score", f"{metrics.get('resilience_score', 0)}/100")
+        ("CO2 Saved (vs Road)", f"{metrics.get('co2_saved', 0)} kg")  # Added
     ]
 
     for label, value in data:
@@ -68,19 +74,17 @@ def generate_pdf(metrics, ai_summary):
 
     pdf.ln(10)
 
-    # 3. STATISTICAL VISUALIZATION (The "Fancy" Part)
+    # 3. VISUAL EVIDENCE
     pdf.chapter_title("3. STOCHASTIC CAPACITY DISTRIBUTION")
     pdf.set_font('Times', '', 10)
-    pdf.write(5,
-              "Figure 1: Probability Density Function (PDF) of demand versus allocated capacity limit. The shaded region represents the service coverage area.")
+    pdf.write(5, "Figure 1: Probability Density Function (PDF) of demand versus allocated capacity limit.")
     pdf.ln(10)
 
-    # --- GENERATE MATPLOTLIB CHART ---
     try:
-        # Data generation for the plot
         mu = metrics['avg_demand']
         sigma = metrics['std_dev']
         capacity = mu + metrics['safety_stock']
+        if sigma <= 0: sigma = 1
 
         x = np.linspace(mu - 4 * sigma, mu + 4 * sigma, 100)
         y = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
@@ -88,12 +92,10 @@ def generate_pdf(metrics, ai_summary):
         plt.figure(figsize=(7, 4))
         plt.plot(x, y, 'b-', linewidth=2, label='Demand PDF')
 
-        # Shade the "Served" area
         x_fill = np.linspace(mu - 4 * sigma, capacity, 100)
         y_fill = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x_fill - mu) / sigma) ** 2)
         plt.fill_between(x_fill, y_fill, color='green', alpha=0.3, label='Fulfilled Demand')
 
-        # Shade the "Stockout" area
         x_risk = np.linspace(capacity, mu + 4 * sigma, 50)
         y_risk = (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x_risk - mu) / sigma) ** 2)
         plt.fill_between(x_risk, y_risk, color='red', alpha=0.3, label='Stockout Risk')
@@ -107,16 +109,12 @@ def generate_pdf(metrics, ai_summary):
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
 
-        # Save to temp file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
             plt.savefig(tmp.name, dpi=150)
             tmp_path = tmp.name
 
-        # Embed in PDF
         pdf.image(tmp_path, x=20, w=170)
         plt.close()
-
-        # Clean up file
         os.unlink(tmp_path)
 
     except Exception as e:
@@ -124,5 +122,4 @@ def generate_pdf(metrics, ai_summary):
         pdf.cell(0, 10, f"Error generating chart: {str(e)}", 0, 1)
         pdf.set_text_color(0, 0, 0)
 
-    # Output
-    return pdf.output(dest='S').encode('latin-1')
+    return bytes(pdf.output(dest='S'))

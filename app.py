@@ -410,10 +410,17 @@ if df is not None and not df.empty:
             with col_pdf1:
                 if st.button("📄 Generate Research Report"):
                     with st.spinner("Compiling Resilience & Cooperation Data..."):
-                        summary = ai_brain.chat_with_data(
-                            f"Write a strategic executive summary for service lane {metrics['product_name']}. Focus on Mode: {transport_mode} and Resilience.",
-                            [], df, metrics
-                        )
+                        # UPDATED PROMPT: Explicitly asks for Recommendations
+                        prompt = f"""
+                                    Analyze the service lane {metrics['product_name']} operating under {metrics['transport_mode']} mode.
+
+                                    Structure your response into two distinct sections:
+                                    1. **Executive Analysis**: Summarize the resilience score ({metrics['resilience_score']}/100), dependency ratio, and carbon footprint.
+                                    2. **Strategic Recommendations**: Provide 3 specific, actionable bullet points on how to improve profitability or reduce risk based on these metrics.
+                                    """
+
+                        summary = ai_brain.chat_with_data(prompt, [], df, metrics)
+
                         pdf_bytes = report_gen.generate_pdf(metrics, summary)
                         st.download_button(
                             label="⬇️ Download PDF Artifact",
