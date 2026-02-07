@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 .vscode/
+*$py.class
 
 # Distribution / Packaging
 build/
@@ -8,9 +9,19 @@ dist/
 *.egg-info/
 setup.cfg
 
+# Generated Reports
+*.pdf
+*.png
+
 # Secrets (NEVER commit these)
 .env
 
 # Local Data Generation Tools
 generate_csv.py
 *.csv
+
+# Streamlit
+.streamlit/
+
+# OS
+.DS_Store
