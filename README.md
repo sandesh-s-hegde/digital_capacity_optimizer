@@ -1,7 +1,7 @@
 # 🚛 LSP Digital Capacity Twin: Multi-Modal Stochastic Engine
 
 **Author:** Sandesh Hegde  
-**Version:** v3.5.0 (Multi-Modal & Monte Carlo Edition)
+**Version:** v3.7.5 (Strategic Research Edition)
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?style=for-the-badge&logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-v1.31-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
@@ -17,8 +17,6 @@
 
 ## 📖 Executive Summary
 This artifact operationalizes the **"Pixels to Premiums"** research framework, serving as a **Decision Support System (DSS)** for Logistics Service Providers (LSPs). 
-
-**New in v3.5.0:** The system now goes beyond static optimization to include **Multi-Modal Transport Strategy** (Road vs. Rail vs. Air) and **Monte Carlo Financial Risk Simulation**, allowing LSPs to balance Profit, Speed, and Sustainability (Triple Bottom Line).
 
 ---
 
@@ -50,30 +48,30 @@ $$\text{Safety Stock} = Z_{\alpha}\sqrt{(\overline{L}\sigma_{D}^{2})+(\overline{
 
 ---
 
-## 🚀 Key Features (v3.5.0)
+## 🚀 Key Features (v3.7.5)
 
-### 🚚 1. Multi-Modal Transport Engine (New!)
+### 🚚 1. Multi-Modal Transport Engine
 * **Mode Selection:** Toggle between **Road** (Standard), **Rail** (Green/Slow), and **Air** (Express/Costly).
 * **Dynamic Economics:** "Air Mode" instantly triples costs and spikes CO2, but slashes lead time to near zero.
 * **Impact Analysis:** See how switching to Rail affects your stockout risk due to slower replenishment.
 
-### 🎲 2. Monte Carlo Risk Simulator (New!)
-* **Stochastic Forecasting:** Simulates 1,000 "virtual years" of demand and supply shocks.
-* **Financial Risk:** Calculates **Loss Probability** (Chance of losing money) and **VaR (Value at Risk)**.
-* **Fat-Tail Detection:** Identifies "Black Swan" risks that static averages miss.
-
-### 🌍 3. Strategic Scorecard (Triple Bottom Line)
+### 🌍 2. Strategic Scorecard (Triple Bottom Line)
 * **Sustainability:** Tracks **CO2 Emissions (kg)** and calculates "Green Savings" from modal shifts.
 * **Customer Loyalty:** Dynamic score based on Fill Rate reliability vs. SLA targets.
 * **Resilience Score:** Composite index (0-100) measuring network robustness.
 
-### 📍 4. Geospatial Control Tower
+### 📍 3. Geospatial Control Tower
 * **Network Topology:** Visualizes Service Lanes (e.g., `BER-MUC`, `HAM-PAR`) on an interactive map.
 * **Flow Status:** Routes change color based on congestion (Orange), disruption (Red), or stability (Green).
 
-### 🌪️ 5. Disruption Simulator
+### 🌪️ 4. Disruption Simulator
 * **"Stress Test" Mode:** Simulates a **Supply Chain Shock** (e.g., Port Strike).
 * **Real-Time Impact:** Instantly doubles lead time variance ($\sigma_{LT}$), crashing Resilience Scores in real-time.
+
+### 5. 🔬 Research Laboratory (New in v3.7.5)
+- **Monte Carlo Simulation:** Runs 10,000 stochastic iterations to stress-test inventory policies.
+- **Risk Metrics:** Calculates *Value at Risk (VaR)* and *Loss Probability* to quantify downside exposure.
+- **Hypothesis Testing:** Compare "Current Strategy" vs. "Newsvendor Optimal" in real-time.
 
 ---
 
@@ -142,9 +140,9 @@ If you use this software in your research, please cite it as follows:
 
 ## 🔮 Roadmap
 
-| Phase | Maturity Level | Key Capabilities | Status                |
-| --- | --- | --- |-----------------------|
-| Phase 1 | Descriptive | Static Rule-Based Logic (EOQ) | ✅ Done                |
-| Phase 2 | Predictive | Cloud Database + Forecasting | ✅ Done                |
-| Phase 3 | Stochastic | **Multi-Modal, Monte Carlo & Resilience** | ✅ **Released (v3.5)** |
-| Phase 4 | Autonomous | Multi-Echelon Reinforcement Learning | 🚧 Planned            |
+| Phase | Maturity Level | Key Capabilities                                    | Status                  |
+| --- | --- |-----------------------------------------------------|-------------------------|
+| Phase 1 | Descriptive | Static Rule-Based Logic (EOQ)                       | ✅ Done                  |
+| Phase 2 | Predictive | Cloud Database + Forecasting                        | ✅ Done                  |
+| Phase 3 | Stochastic | **Multi-Modal, Monte Carlo & Resilience, Research** | ✅ **Released (v3.7.5)** |
+| Phase 4 | Autonomous | Multi-Echelon Reinforcement Learning                | 🚧 Planned              |
