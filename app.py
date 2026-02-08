@@ -234,7 +234,13 @@ if source_option == "🔌 Live WMS Database":
     else:
         st.sidebar.caption("No data in WMS.")
 
-    # E. DANGER ZONE
+    # E. RESEARCH TOOLS (NEW)
+    with st.sidebar.expander("🧪 Research Tools"):
+        if st.button("🧹 Clear Simulation Cache"):
+            st.session_state.sim_results = None
+            st.rerun()
+
+    # F. DANGER ZONE
     st.sidebar.markdown("---")
     with st.sidebar.expander("⚠️ System Admin"):
         if st.button("🧨 Reset Database"):
