@@ -38,6 +38,7 @@ def chat_with_data(user_query, chat_history, df, metrics):
             optimal_sla_math = 0.95
 
         # 3. BUILD CONTEXT STRING
+        # We use 'USD' here to avoid confusing the AI, but instruct it to output '\$' later
         data_context = f"""
         [LSP DIGITAL TWIN DATA STREAM]
 
@@ -52,8 +53,8 @@ def chat_with_data(user_query, chat_history, df, metrics):
         4. Outsourced Volume: {metrics.get('outsourced', 0)} units (Status: {"COOPERATION ACTIVE" if is_outsourcing else "INTERNAL"})
 
         --- FINANCIAL METRICS ---
-        1. Unit Cost: ${uc} | Selling Price: ${sp} | Margin: ${margin}
-        2. Holding Cost: ${h_cost}/unit
+        1. Unit Cost: USD {uc} | Selling Price: USD {sp} | Margin: USD {margin}
+        2. Holding Cost: USD {h_cost}/unit
         3. OPTIMAL SLA (Newsvendor): {optimal_sla_math:.1%} (Based on Cost vs Risk)
 
         --- STRATEGIC METRICS ---
@@ -62,25 +63,34 @@ def chat_with_data(user_query, chat_history, df, metrics):
         3. Customer Loyalty: {metrics.get('loyalty_score', 0)}/100
         """
 
-        # 4. SYSTEM INSTRUCTIONS (Updated Image Links & Formatting)
+        # 4. SYSTEM INSTRUCTIONS (Fixed for Streamlit LaTeX Conflict)
         system_instruction = """
         You are a specialized Research Assistant for a Logistics Service Provider.
 
-        ### STRICT RULES:
+        ### CRITICAL STREAMLIT FORMATTING RULES:
+        1. **CURRENCY ESCAPING:** Streamlit uses '$' for math formulas. You MUST escape dollar signs in text.
+           - **WRONG:** "The cost is $50." (This triggers LaTeX mode and deletes spaces)
+           - **RIGHT:** "The cost is \$50." (Use a backslash before every dollar sign)
+
+        2. **SPACING:** Do not run numbers into text.
+           - **WRONG:** "Margin(\$35)against"
+           - **RIGHT:** "Margin (\$35) against"
+
+        3. **MATH BLOCKS:** Only use standard LaTeX for actual formulas, not for simple currency.
+           - Example: $$ Cu = SP - UC $$ is fine.
+           - Example: "Profit is \$100" is fine.
+
+        ### CONTENT RULES:
         1. **SCOPE:** Refuse questions about capitals, weather, or non-logistics topics.
         2. **ACCURACY:** If the user asks "What does the heatmap say?", explain the trade-off between risk and cost using the [FINANCIAL METRICS].
-
-        3. **FORMATTING:** - Ensure monetary values are clearly separated (e.g., "$35.00", not "Margin:35.0").
-           - Do not use markdown bolding inside a parenthesis if it breaks the flow.
-
-        4. **DIAGRAMS:** When explaining concepts, use these EXACT markdown links:
+        3. **DIAGRAMS:** When explaining concepts, use these EXACT markdown links:
            - "Sweet Spot" / "Optimal SLA": 
-             ![Newsvendor Model](https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Standard_deviation_diagram.svg/320px-Standard_deviation_diagram.svg.png)
 
            - "Cost Trade-offs" / "Cost Curve": 
-             ![Cost Curve](https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Economic_Order_Quantity_pdf.svg/320px-Economic_Order_Quantity_pdf.svg.png)
 
-        5. **TONE:** Professional, Concise.
+
+        ### TONE:
+        Professional, Concise, Research-Oriented.
         """
 
         # 5. INITIALIZE MODEL
@@ -91,9 +101,11 @@ def chat_with_data(user_query, chat_history, df, metrics):
 
         # 6. BUILD HISTORY
         clean_history = []
-        for msg in chat_history[-4:]:
-            role = "user" if msg['role'] == 'user' else "model"
-            clean_history.append({"role": role, "parts": [msg['parts'][0]]})
+        if chat_history:
+            for msg in chat_history[-4:]:
+                role = "user" if msg['role'] == 'user' else "model"
+                if msg.get('parts'):
+                    clean_history.append({"role": role, "parts": msg['parts']})
 
         chat = model.start_chat(history=clean_history)
         full_prompt = f"{data_context}\n\nUSER QUESTION: {user_query}"
@@ -105,14 +117,15 @@ def chat_with_data(user_query, chat_history, df, metrics):
                 response = chat.send_message(full_prompt)
                 return response.text
             except Exception as e:
-                if "429" in str(e) or "quota" in str(e).lower():
+                error_msg = str(e).lower()
+                if "429" in error_msg or "quota" in error_msg:
                     if attempt < max_retries - 1:
-                        time.sleep(10)  # Wait 10s and retry
+                        time.sleep(10)
                         continue
                     else:
                         return "⚠️ **Traffic Limit:** The AI is busy. Please wait 30 seconds."
                 else:
-                    raise e
+                    return f"❌ AI Error: {str(e)}"
 
     except Exception as e:
-        return f"❌ AI Error: {str(e)}"
+        return f"❌ System Error: {str(e)}"
