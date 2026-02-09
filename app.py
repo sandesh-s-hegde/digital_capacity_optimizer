@@ -449,7 +449,7 @@ if df is not None and not df.empty:
                 sim_ctx = f"Simulation Run: Optimal SS {int(res['optimal_ss'])}, Margin ${res.get('margin', unit_margin)}, Holding ${holding_cost}"
             render_chat_ui(df, metrics, extra_context=sim_ctx, key="research_chat")
 
-        # --- TAB 4: GLOBAL SOURCING (Unified USD + CBAM + Heatmap) ---
+        # --- TAB 4: GLOBAL SOURCING (Unified USD + CBAM + Heatmap v5.3) ---
         with tab4:
             st.subheader("🌏 Global Sourcing Strategy (China Plus One)")
             st.markdown(
@@ -485,16 +485,13 @@ if df is not None and not df.empty:
             holding_rate = 20
 
             # Domestic (EU) Calculation
-            # Domestic pays Carbon Tax internally (ETS)
             ets_cost_eu = (eu_co2 / 1000) * carbon_tax
             cost_eu = eu_price + ets_cost_eu
             risk_eu = (eu_lead / 365) * demand * cost_eu * (holding_rate / 100) / demand
             total_eu = cost_eu + risk_eu
 
             # Offshore (India) Calculation
-            # 1. Duty on Base Price
             duty = in_price * (tariff / 100)
-            # 2. CBAM on Embedded Carbon (Import Tax)
             cbam_cost = (in_co2 / 1000) * carbon_tax
 
             cost_in = in_price + in_freight + duty + cbam_cost
@@ -527,15 +524,16 @@ if df is not None and not df.empty:
                               height=500)
             st.plotly_chart(fig, use_container_width=True)
 
-            # 5. STRATEGIC INSIGHT
+            # 5. STRATEGIC INSIGHT (FIXED: Escaped Dollar Signs)
+            labor_arbitrage = eu_price - in_price
             if delta > 0:
                 st.success(
-                    f"✅ **Strategy:** Sourcing from India remains profitable despite CBAM. The Labor arbitrage (${eu_price - in_price}) is strong enough to absorb the **${cbam_cost:.2f} Green Tax**.")
+                    f"✅ **Strategy:** Sourcing from India remains profitable despite CBAM. The Labor arbitrage (\${labor_arbitrage:.2f}) is strong enough to absorb the **\${cbam_cost:.2f} Green Tax**.")
             else:
                 st.error(
-                    f"⚠️ **Strategy:** Reshore to Europe. The combined weight of **Logistics Risk ($)** and **CBAM Tax ($)** wipes out the manufacturing savings.")
+                    f"⚠️ **Strategy:** Reshore to Europe. The combined weight of **Logistics Risk** and **CBAM Tax** wipes out the manufacturing savings.")
 
-            # 6. SENSITIVITY HEATMAP (NEW v5.3)
+            # 6. SENSITIVITY HEATMAP
             st.divider()
             st.subheader("🎛️ Strategic Robustness: The Sensitivity Matrix")
             st.markdown(
