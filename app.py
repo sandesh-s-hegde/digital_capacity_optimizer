@@ -449,105 +449,175 @@ if df is not None and not df.empty:
                 sim_ctx = f"Simulation Run: Optimal SS {int(res['optimal_ss'])}, Margin ${res.get('margin', unit_margin)}, Holding ${holding_cost}"
             render_chat_ui(df, metrics, extra_context=sim_ctx, key="research_chat")
 
-            # --- TAB 4: GLOBAL SOURCING (Unified USD + CBAM) ---
-            with tab4:
-                st.subheader("🌏 Global Sourcing Strategy (China Plus One)")
-                st.markdown(
-                    "Quantify the impact of **Free Trade Agreements (FTA)** vs. **Green Trade Barriers (CBAM)** on sourcing strategy.")
+        # --- TAB 4: GLOBAL SOURCING (Unified USD + CBAM + Heatmap) ---
+        with tab4:
+            st.subheader("🌏 Global Sourcing Strategy (China Plus One)")
+            st.markdown(
+                "Quantify the impact of **Free Trade Agreements (FTA)** vs. **Green Trade Barriers (CBAM)** on sourcing strategy.")
 
-                # 1. SCENARIO INPUTS
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown("### 🏭 Baseline: Domestic/Nearshore")
-                    eu_price = st.number_input("Unit Price ($)", value=85.0, help="Higher Labor Cost")
-                    eu_lead = st.number_input("Lead Time (Days)", value=4, help="Fast Trucking")
-                    eu_co2 = st.number_input("Carbon Footprint (kg CO₂/unit)", value=2.5, help="Cleaner Grid")
+            # 1. SCENARIO INPUTS
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### 🏭 Baseline: Domestic/Nearshore")
+                eu_price = st.number_input("Unit Price ($)", value=85.0, help="Higher Labor Cost")
+                eu_lead = st.number_input("Lead Time (Days)", value=4, help="Fast Trucking")
+                eu_co2 = st.number_input("Carbon Footprint (kg CO₂/unit)", value=2.5, help="Cleaner Grid")
 
-                with col2:
-                    st.markdown("### 🚢 Challenger: India (Offshore)")
-                    in_price = st.number_input("Offshore Unit Price ($)", value=50.0, help="Arbitrage Advantage")
-                    in_freight = st.number_input("Freight & Logistics ($)", value=12.0)
-                    in_lead = st.slider("Offshore Lead Time (Days)", 20, 60, 45)
-                    in_co2 = st.number_input("Carbon Footprint (kg CO₂/unit)", value=8.0, help="Coal-heavy Grid")
+            with col2:
+                st.markdown("### 🚢 Challenger: India (Offshore)")
+                in_price = st.number_input("Offshore Unit Price ($)", value=50.0, help="Arbitrage Advantage")
+                in_freight = st.number_input("Freight & Logistics ($)", value=12.0)
+                in_lead = st.slider("Offshore Lead Time (Days)", 20, 60, 45)
+                in_co2 = st.number_input("Carbon Footprint (kg CO₂/unit)", value=8.0, help="Coal-heavy Grid")
 
-                st.divider()
+            st.divider()
 
-                # 2. POLICY LEVERS
-                st.markdown("#### ⚖️ Policy Levers: The Clash of Tariffs vs. Taxes")
-                c_lev1, c_lev2 = st.columns(2)
-                with c_lev1:
-                    tariff = st.slider("Import Tariff (%)", 0, 20, 0, help="0% = Full Free Trade Agreement (FTA)")
-                with c_lev2:
-                    carbon_tax = st.slider("EU Carbon Price ($/tonne)", 0, 200, 85, help="ETS / CBAM Price Forecast")
+            # 2. POLICY LEVERS
+            st.markdown("#### ⚖️ Policy Levers: The Clash of Tariffs vs. Taxes")
+            c_lev1, c_lev2 = st.columns(2)
+            with c_lev1:
+                tariff = st.slider("Import Tariff (%)", 0, 20, 0, help="0% = Full Free Trade Agreement (FTA)")
+            with c_lev2:
+                carbon_tax = st.slider("EU Carbon Price ($/tonne)", 0, 200, 85, help="ETS / CBAM Price Forecast")
 
-                # 3. CALCULATIONS
-                demand = 15000
-                holding_rate = 20
+            # 3. CALCULATIONS
+            demand = 15000
+            holding_rate = 20
 
-                # Domestic (EU) Calculation
-                # Domestic pays Carbon Tax internally (ETS)
-                ets_cost_eu = (eu_co2 / 1000) * carbon_tax
-                cost_eu = eu_price + ets_cost_eu
-                risk_eu = (eu_lead / 365) * demand * cost_eu * (holding_rate / 100) / demand
-                total_eu = cost_eu + risk_eu
+            # Domestic (EU) Calculation
+            # Domestic pays Carbon Tax internally (ETS)
+            ets_cost_eu = (eu_co2 / 1000) * carbon_tax
+            cost_eu = eu_price + ets_cost_eu
+            risk_eu = (eu_lead / 365) * demand * cost_eu * (holding_rate / 100) / demand
+            total_eu = cost_eu + risk_eu
 
-                # Offshore (India) Calculation
-                # 1. Duty on Base Price
-                duty = in_price * (tariff / 100)
-                # 2. CBAM on Embedded Carbon (Import Tax)
-                cbam_cost = (in_co2 / 1000) * carbon_tax
+            # Offshore (India) Calculation
+            # 1. Duty on Base Price
+            duty = in_price * (tariff / 100)
+            # 2. CBAM on Embedded Carbon (Import Tax)
+            cbam_cost = (in_co2 / 1000) * carbon_tax
 
-                cost_in = in_price + in_freight + duty + cbam_cost
-                risk_in = (in_lead / 365) * demand * cost_in * (holding_rate / 100) / demand
-                total_in = cost_in + risk_in
+            cost_in = in_price + in_freight + duty + cbam_cost
+            risk_in = (in_lead / 365) * demand * cost_in * (holding_rate / 100) / demand
+            total_in = cost_in + risk_in
 
-                # 4. VISUALIZATION
-                c1, c2, c3 = st.columns(3)
-                c1.metric("Domestic Landed Cost", f"${total_eu:.2f}", f"Incl. ${ets_cost_eu:.2f} Carbon Cost")
+            # 4. VISUALIZATION
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Domestic Landed Cost", f"${total_eu:.2f}", f"Incl. ${ets_cost_eu:.2f} Carbon Cost")
 
-                delta = total_eu - total_in
-                c2.metric("Offshore Landed Cost", f"${total_in:.2f}", f"Incl. ${cbam_cost:.2f} CBAM Tax")
+            delta = total_eu - total_in
+            c2.metric("Offshore Landed Cost", f"${total_in:.2f}", f"Incl. ${cbam_cost:.2f} CBAM Tax")
 
-                winner = "Offshore" if delta > 0 else "Domestic"
-                c3.metric("Sourcing Advantage", f"${abs(delta):.2f} / unit", f"Winner: {winner}",
-                          delta_color="normal" if delta > 0 else "inverse")
+            winner = "Offshore" if delta > 0 else "Domestic"
+            c3.metric("Sourcing Advantage", f"${abs(delta):.2f} / unit", f"Winner: {winner}",
+                      delta_color="normal" if delta > 0 else "inverse")
 
-                # Stacked Bar Chart
-                fig = go.Figure(data=[
-                    go.Bar(name='Base Price', x=['Domestic', 'Offshore'], y=[eu_price, in_price],
-                           marker_color='#2E86C1'),
-                    go.Bar(name='Freight', x=['Domestic', 'Offshore'], y=[0, in_freight], marker_color='#28B463'),
-                    go.Bar(name='Tariff (Trade)', x=['Domestic', 'Offshore'], y=[0, duty], marker_color='#E74C3C'),
-                    go.Bar(name='Carbon Tax (CBAM/ETS)', x=['Domestic', 'Offshore'], y=[ets_cost_eu, cbam_cost],
-                           marker_color='#5D6D7E'),
-                    go.Bar(name='Risk (Inventory)', x=['Domestic', 'Offshore'], y=[risk_eu, risk_in],
-                           marker_color='#F1C40F')
-                ])
-                fig.update_layout(barmode='stack', title="Landed Cost: The Impact of Green Regulations (CBAM)",
-                                  height=500)
-                st.plotly_chart(fig, use_container_width=True)
+            # Stacked Bar Chart
+            fig = go.Figure(data=[
+                go.Bar(name='Base Price', x=['Domestic', 'Offshore'], y=[eu_price, in_price],
+                       marker_color='#2E86C1'),
+                go.Bar(name='Freight', x=['Domestic', 'Offshore'], y=[0, in_freight], marker_color='#28B463'),
+                go.Bar(name='Tariff (Trade)', x=['Domestic', 'Offshore'], y=[0, duty], marker_color='#E74C3C'),
+                go.Bar(name='Carbon Tax (CBAM/ETS)', x=['Domestic', 'Offshore'], y=[ets_cost_eu, cbam_cost],
+                       marker_color='#5D6D7E'),
+                go.Bar(name='Risk (Inventory)', x=['Domestic', 'Offshore'], y=[risk_eu, risk_in],
+                       marker_color='#F1C40F')
+            ])
+            fig.update_layout(barmode='stack', title="Landed Cost: The Impact of Green Regulations (CBAM)",
+                              height=500)
+            st.plotly_chart(fig, use_container_width=True)
 
-                # 5. STRATEGIC INSIGHT
-                if delta > 0:
-                    st.success(
-                        f"✅ **Strategy:** Sourcing from India remains profitable despite CBAM. The Labor arbitrage (${eu_price - in_price}) is strong enough to absorb the **${cbam_cost:.2f} Green Tax**.")
-                else:
-                    st.error(
-                        f"⚠️ **Strategy:** Reshore to Europe. The combined weight of **Logistics Risk ($)** and **CBAM Tax ($)** wipes out the manufacturing savings.")
+            # 5. STRATEGIC INSIGHT
+            if delta > 0:
+                st.success(
+                    f"✅ **Strategy:** Sourcing from India remains profitable despite CBAM. The Labor arbitrage (${eu_price - in_price}) is strong enough to absorb the **${cbam_cost:.2f} Green Tax**.")
+            else:
+                st.error(
+                    f"⚠️ **Strategy:** Reshore to Europe. The combined weight of **Logistics Risk ($)** and **CBAM Tax ($)** wipes out the manufacturing savings.")
 
-                # 6. AI CONTEXT
-                fta_context = f"""
-                    Global Sourcing Context (CBAM Analysis):
-                    - Domestic Cost: ${total_eu:.2f} (Carbon Intensity: {eu_co2}kg).
-                    - Offshore Cost: ${total_in:.2f} (Carbon Intensity: {in_co2}kg).
-                    - Policy: Tariff {tariff}% | Carbon Price ${carbon_tax}/ton.
-                    - Impact: CBAM added ${cbam_cost:.2f} to Offshore cost.
-                    - Verdict: {winner} is the optimal choice by ${abs(delta):.2f}.
-                    """
-                render_chat_ui(df, metrics, extra_context=fta_context, key="fta_chat")
+            # 6. SENSITIVITY HEATMAP (NEW v5.3)
+            st.divider()
+            st.subheader("🎛️ Strategic Robustness: The Sensitivity Matrix")
+            st.markdown(
+                "Identify the **'Tipping Point'**. At what combination of **Carbon Tax** and **Freight Cost** does the India advantage disappear?")
+
+            with st.expander("🛠️ Configure Sensitivity Parameters", expanded=False):
+                s1, s2 = st.columns(2)
+                with s1:
+                    max_freight = st.slider("Max Freight Scenario ($)", 10.0, 50.0, 25.0)
+                with s2:
+                    max_carbon = st.slider("Max Carbon Price ($/ton)", 50, 300, 200)
+
+            if st.button("🔄 Run Sensitivity Heatmap"):
+                with st.spinner("Calculating 400 strategic scenarios..."):
+                    # Generate ranges
+                    freight_range = np.linspace(5.0, max_freight, 20)  # Y-Axis
+                    carbon_range = np.linspace(0, max_carbon, 20)  # X-Axis
+
+                    z_values = []  # Profit Delta (Positive = India Wins, Negative = EU Wins)
+
+                    for f in freight_range:
+                        row = []
+                        for c in carbon_range:
+                            # Re-calculate costs dynamically
+
+                            # 1. EU Cost (Domestic)
+                            cost_eu_loop = eu_price + ((eu_co2 / 1000) * c)
+                            risk_eu_loop = (eu_lead / 365) * demand * cost_eu_loop * (holding_rate / 100) / demand
+                            total_eu_loop = cost_eu_loop + risk_eu_loop
+
+                            # 2. India Cost (Offshore)
+                            duty_loop = in_price * (tariff / 100)
+                            cbam_loop = (in_co2 / 1000) * c
+
+                            cost_in_loop = in_price + f + duty_loop + cbam_loop
+                            risk_in_loop = (in_lead / 365) * demand * cost_in_loop * (holding_rate / 100) / demand
+                            total_in_loop = cost_in_loop + risk_in_loop
+
+                            # Calculate Advantage (EU - India)
+                            advantage = total_eu_loop - total_in_loop
+                            row.append(advantage)
+                        z_values.append(row)
+
+                    # PLOT HEATMAP
+                    fig_heat = go.Figure(data=go.Heatmap(
+                        z=z_values,
+                        x=carbon_range,
+                        y=freight_range,
+                        colorscale='RdBu',  # Red = Negative (Reshore), Blue = Positive (Offshore)
+                        zmid=0,  # The Tipping Point
+                        colorbar=dict(title="Savings ($/unit)")
+                    ))
+
+                    fig_heat.update_layout(
+                        title="Global Sourcing Viability Frontier",
+                        xaxis_title="Carbon Price ($/tonne)",
+                        yaxis_title="Ocean Freight Cost ($/unit)",
+                        height=500
+                    )
+
+                    st.plotly_chart(fig_heat, use_container_width=True)
+
+                    st.info("""
+                        **How to read this Map:**
+                        * 🔵 **Blue Zone:** India Sourcing is Profitable.
+                        * 🔴 **Red Zone:** Reshoring to EU is Profitable.
+                        * ⚪ **White Line:** The Strategic Tipping Point (Break-even).
+                        """)
+
+            # 7. AI CONTEXT
+            fta_context = f"""
+                Global Sourcing Context (CBAM Analysis):
+                - Domestic Cost: ${total_eu:.2f} (Carbon Intensity: {eu_co2}kg).
+                - Offshore Cost: ${total_in:.2f} (Carbon Intensity: {in_co2}kg).
+                - Policy: Tariff {tariff}% | Carbon Price ${carbon_tax}/ton.
+                - Impact: CBAM added ${cbam_cost:.2f} to Offshore cost.
+                - Verdict: {winner} is the optimal choice by ${abs(delta):.2f}.
+                """
+            render_chat_ui(df, metrics, extra_context=fta_context, key="fta_chat")
 
 st.markdown("---")
-st.caption(f"© 2026 Logistics Research Lab | v3.9.0 | CBAM Research Edition")
+st.caption(f"© 2026 Logistics Research Lab | v3.9.0 | Robustness Analysis Edition")
 
 if source_option == "🔌 Live WMS Database" and df is not None:
     with st.expander("🔍 Inspect Warehouse Logs"):
