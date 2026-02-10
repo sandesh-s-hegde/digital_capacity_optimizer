@@ -33,3 +33,6 @@ __all__ = [
 
 __version__ = "3.9.0"
 __author__ = "Sandesh Hegde"
+__license__ = "MIT"
+__status__ = "Research Artifact"
+__email__ = "s.sandesh.hegde@gmail.com"
