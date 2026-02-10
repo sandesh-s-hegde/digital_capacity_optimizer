@@ -1,8 +1,11 @@
 """
-Digital Capacity Optimizer
-==========================
+LSP Digital Capacity Twin
+=========================
 
-A supply chain intelligence package for cloud infrastructure.
+A stochastic digital twin for logistics service providers (LSPs) to optimize
+capacity, inventory, and risk management.
+
+This package operationalizes the "Pixels to Premiums" research framework.
 """
 
 from .inventory_math import (
@@ -21,5 +24,5 @@ __all__ = [
     "calculate_required_inventory"
 ]
 
-__version__ = "1.0.0"
+__version__ = "3.9.0"
 __author__ = "Sandesh Hegde"
