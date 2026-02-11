@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lsp_digital_twin"
+version = "3.9.0"
+authors = [
+  { name="Sandesh Hegde", email="s.sandesh.hegde@gmail.com" },
+]
+description = "A stochastic digital twin for logistics service providers (LSPs)."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "streamlit",
+    "pandas",
+    "numpy",
+    "plotly",
+    "scipy",
+    "google-generativeai"
+]
