@@ -36,3 +36,13 @@ __author__ = "Sandesh Hegde"
 __license__ = "MIT"
 __status__ = "Research Artifact"
 __email__ = "s.sandesh.hegde@gmail.com"
+
+def get_info():
+    """Returns the research context for this artifact."""
+    return {
+        "Project": "LSP Digital Capacity Twin",
+        "Framework": "Pixels to Premiums",
+        "Version": __version__,
+        "Author": __author__,
+        "Status": __status__
+    }
