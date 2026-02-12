@@ -2,6 +2,30 @@
 
 All notable changes to the "Financial Digital Twin" research artifact will be documented in this file.
 
+## [4.0.0] - 2026-02-12
+### Added
+- **Global Sourcing Simulator:** CBAM and FTA impact modeling.
+- **Sensitivity Matrix:** Visualizing the sourcing tipping point.
+- **Health Diagnostics:** New health_check.py for environment validation.
+
+### Changed
+- Standardized all financial metrics to USD ($).
+- Optimized Monte Carlo engine to handle 10k iterations natively.
+
+### Fixed
+- Fixed LaTeX formatting issues in AI chat responses.
+- Hardened math modules against zero-demand edge cases.
+
+## [v3.0.0] - 2026-01-26
+### Added
+- **Monte Carlo Risk Engine:** Implemented 1,000-iteration stochastic simulation for profit forecasting.
+- **Geospatial Logic:** Integrated `map_viz.py` for lane-specific network topology visualization.
+- **Multi-Modal Selectors:** Added Air/Rail/Road logic with dynamic CO2 and lead-time multipliers.
+
+### Changed
+- **Research Refocus:** Shifted core logic from simple "EOQ" to "Supply Chain Resilience" (Wallenburg 2011 framework).
+- **UI:** Redesigned Streamlit layout to a multi-tab architecture.
+
 ## [v2.7.0] - 2026-01-29
 ### Added
 - **Governance:** Added Code of Conduct and Contributing Guidelines for academic compliance.
