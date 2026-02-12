@@ -1,11 +1,11 @@
 cff-version: 1.2.0
-message: "If you use this software in your research, please cite it as below."
+message: "If you use this stable release, please cite it as below."
 authors:
 - family-names: "Hegde"
   given-names: "Sandesh Subramanya"
 title: "LSP Digital Capacity Twin: Multi-Modal Stochastic Engine"
-version: 3.8.0
-date-released: 2026-02-08
+version: 4.0.0
+date-released: 2026-02-12
 url: "https://github.com/sandesh-s-hegde/digital_capacity_optimizer"
 abstract: "A Decision Support System (DSS) for Logistics Service Providers operationalizing supply chain resilience, horizontal cooperation, and multi-modal transport strategy. The artifact incorporates a Monte Carlo risk engine, carbon emission tracking (Green Logistics), and a Global Sourcing Simulator (China Plus One) to balance profit, speed, and geopolitical risk."
 keywords:
@@ -24,4 +24,4 @@ preferred-citation:
     given-names: "Sandesh Subramanya"
   title: "LSP Digital Capacity Twin: Multi-Modal Stochastic Engine"
   year: 2026
-  version: 3.8.0
+  version: 4.0.0
