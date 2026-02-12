@@ -1,7 +1,7 @@
 # 🚛 LSP Digital Capacity Twin: Multi-Modal Stochastic Engine
 
 **Author:** Sandesh Hegde  
-**Version:** v3.8.0 (Strategic Research Edition)
+**Version:** v4.0.0 (Strategic Research Edition)
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?style=for-the-badge&logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-v1.31-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
@@ -16,7 +16,7 @@
 ---
 
 ## 📖 Executive Summary
-This artifact operationalizes the **"Pixels to Premiums"** research framework, serving as a **Decision Support System (DSS)** for Logistics Service Providers (LSPs). It now includes a **Global Sourcing Simulator** to quantify the "China Plus One" strategy and the impact of Free Trade Agreements (FTAs). 
+This artifact operationalizes the **"Pixels to Premiums"** research framework, serving as a **Decision Support System (DSS)** for Logistics Service Providers (LSPs). It provides advanced **Risk Quantification** and **Resilience Simulation** to solve for the "China Plus One" strategy, the impact of Free Trade Agreements (FTAs), and the emerging Carbon Border Adjustment Mechanism (CBAM).
 
 ---
 
@@ -46,40 +46,42 @@ The system calculates **Risk-Adjusted Safety Stock** using a Root Sum of Squares
 
 $$\text{Safety Stock} = Z_{\alpha}\sqrt{(\overline{L}\sigma_{D}^{2})+(\overline{D}^{2}\sigma_{LT}^{2})}$$
 
+### 5. Risk Quantification Engine
+Moving beyond deterministic models, the system employs **Stochastic Risk Quantification**. By simulating 10,000 supply chain scenarios, we calculate the **Value at Risk (VaR 95%)**, allowing LSPs to understand the financial downside and loss probability $(\%P_{loss})$ of aggressive lean inventory policies.
+
+### 6. Resilience Simulation Logic
+Resilience is simulated by stress-testing the network against exogenous shocks (e.g., port closures or labor strikes). We measure the recovery capability when lead-time volatility $(\sigma_{LT})$ doubles, creating a **Resilience Index** (0-100) that balances safety stock coverage against partner dependency.
+
 ---
 
-## 🚀 Key Features (v3.8.0)
+## 🚀 Key Features (v4.0.0)
 
 ### 🚚 1. Multi-Modal Transport Engine
 * **Mode Selection:** Toggle between **Road** (Standard), **Rail** (Green/Slow), and **Air** (Express/Costly).
-* **Dynamic Economics:** "Air Mode" instantly triples costs and spikes CO2, but slashes lead time to near zero.
-* **Impact Analysis:** See how switching to Rail affects your stockout risk due to slower replenishment.
+* **Impact Analysis:** Real-time visibility into how switching to Rail affects stockout risk due to slower replenishment cycles.
 
-### 🌏 2. Global Sourcing Strategy (New in v3.8!)
+### 🌏 2. Global Sourcing & Trade Strategy
 * **"China Plus One" Simulator:** Compares **Domestic/Nearshore** sourcing against **Offshore (e.g., India)** sourcing.
-* **Trade Policy Lever:** Interactive Tariff slider (0-20%) to test the viability of Free Trade Agreements (FTAs).
-* **Risk vs. Reward:** Visualizes the "tipping point" where logistics risk outweighs labor cost savings.
+* **Trade Policy Lever:** Interactive Tariff and CBAM (Carbon Tax) sliders to test the viability of Free Trade Agreements vs. Green Trade Barriers.
 
 ### 🌍 3. Strategic Scorecard (Triple Bottom Line)
 * **Sustainability:** Tracks **CO2 Emissions (kg)** and calculates "Green Savings" from modal shifts.
-* **Customer Loyalty:** Dynamic score based on Fill Rate reliability vs. SLA targets.
-* **Resilience Score:** Composite index (0-100) measuring network robustness.
+* **Customer Loyalty:** Dynamic score based on Fill Rate reliability vs. SLA targets (Wallenburg 2011).
 
-### 🌪️ 4. Disruption Simulator
+### 🌪️ 4. Resilience Simulator
 * **"Stress Test" Mode:** Simulates a **Supply Chain Shock** (e.g., Port Strike).
-* **Real-Time Impact:** Instantly doubles lead time variance ($\sigma_{LT}$), crashing Resilience Scores in real-time.
+* **Recovery Analysis:** Instantly quantifies the crash in Resilience Scores based on current safety buffers and modal flexibility.
 
 ### 🔬 5. Research Laboratory (Enhanced)
 * **Stochastic Validation:** Runs **10,000 iterations** to prove the "Newsvendor Optimal" strategy.
-* **Loss Predictability:** New metric quantifying the **Probability of Loss (%)** to identify dangerous cost structures.
-* **Profit Heatmaps:** Visualizes the "Zone of Profitability" across demand and volatility scenarios.
+* **Sensitivity Matrix:** Identifies the "Tipping Point" where logistics risk and carbon taxes wipe out manufacturing cost savings.
 
 ---
 
 ## ⚙️ Technical Architecture
 
 * **Core Logic:** `numpy` (Monte Carlo) & `scipy.stats` (Stochastic Calculus).
-* **Intelligence Layer:** Google Gemini 1.5 Flash (via `ai_brain.py`) for strategic context.
+* **Intelligence Layer:** Google Gemini Flash Latest (via `ai_brain.py`) for strategic context.
 * **Visualization:** `plotly.graph_objects` (Geospatial & Risk Histograms).
 * **CI/CD:** GitHub Actions (Automated Testing & Deployment).
 * **Frontend:** Streamlit (React-based) for interactive simulation.
@@ -121,7 +123,7 @@ If you use this software in your research, please cite it as follows:
 
 **Harvard Style:**
 
-> Hegde, S.S. (2026). LSP Digital Capacity Twin: Multi-Modal Stochastic Engine (Version 3.8.0) [Software]. Available at: https://github.com/sandesh-s-hegde/digital_capacity_optimizer
+> Hegde, S.S. (2026). LSP Digital Capacity Twin: Multi-Modal Stochastic Engine (Version 4.0.0) [Software]. Available at: https://github.com/sandesh-s-hegde/digital_capacity_optimizer
 
 **BibTeX:**
 
@@ -131,7 +133,7 @@ If you use this software in your research, please cite it as follows:
   month = feb,
   title = {LSP Digital Capacity Twin: Multi-Modal Stochastic Engine},
   url = {(https://github.com/sandesh-s-hegde/digital_capacity_optimizer)},
-  version = {3.8.0},
+  version = {4.0.0},
   year = {2026}
 }
 
@@ -141,10 +143,10 @@ If you use this software in your research, please cite it as follows:
 
 ## 🔮 Roadmap
 
-| Phase   | Maturity Level | Key Capabilities                                    | Status        |
-|---------| --- |-----------------------------------------------------|---------------|
-| Phase 1 | Descriptive | Static Rule-Based Logic (EOQ)                       | ✅ Done        |
-| Phase 2 | Predictive | Cloud Database + Forecasting                        | ✅ Done        |
-| Phase 3 | Stochastic | **Multi-Modal, Monte Carlo & Resilience, Research** | ✅ **Released (v3.8)** |
-| Phase 4 | Strategic | Global Sourcing (FTA) & Trade Policy                | ✅ **Released (v3.8)** |
-| Phase 5 | Autonomous | Multi-Echelon Reinforcement Learning                | 🚧 Planned    |
+| Phase   | Maturity Level | Key Capabilities                                    | Status              |
+|---------| --- |-----------------------------------------------------|---------------------|
+| Phase 1 | Descriptive | Static Rule-Based Logic (EOQ)                       | ✅ Done              |
+| Phase 2 | Predictive | Cloud Database + Forecasting                        | ✅ Done              |
+| Phase 3 | Stochastic | **Multi-Modal, Monte Carlo & Resilience, Research** | ✅ **Stable (v4.0)** |
+| Phase 4 | Strategic | Global Sourcing (FTA) & Trade Policy                | ✅ **Stable (v4.0)** |
+| Phase 5 | Autonomous | Multi-Echelon Reinforcement Learning                | 🚧 Planned          |
