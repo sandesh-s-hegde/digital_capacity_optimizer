@@ -236,7 +236,7 @@ partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0)
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 LSP Digital Twin | v3.9.0 | Robustness Analysis Edition")
+st.sidebar.caption("🟢 LSP Digital Twin | v4.0.0 | Robustness Analysis Edition")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.info(
@@ -615,7 +615,7 @@ if df is not None and not df.empty:
             render_chat_ui(df, metrics, extra_context=fta_context, key="fta_chat")
 
 st.markdown("---")
-st.caption(f"© 2026 Logistics Research Lab | v3.9.0 | Robustness Analysis Edition")
+st.caption(f"© 2026 Logistics Research Lab | v4.0.0 | Robustness Analysis Edition")
 
 if source_option == "🔌 Live WMS Database" and df is not None:
     with st.expander("🔍 Inspect Warehouse Logs"):
