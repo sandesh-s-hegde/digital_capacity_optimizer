@@ -1,23 +1,18 @@
-import os
-import psycopg2
+import db_manager
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
-
-# Configuration
-DB_URL = os.getenv("DATABASE_URL")
-if not DB_URL:
-    raise ValueError("❌ DATABASE_URL is missing from .env")
 
 
 def generate_research_data():
+    """
+    Generates stochastic demand patterns for 3 specific supply chain scenarios.
+    Ref: 'Pixels to Premiums' Framework - Volatility & Seasonality Modeling.
+    """
     print("🧪 Generating PhD-grade LSP datasets...")
 
     data = []
+    # Generate data for the last 365 days
     end_date = datetime.today()
     start_date = end_date - timedelta(days=365)
     dates = pd.date_range(start=start_date, end=end_date, freq='D')
@@ -27,7 +22,8 @@ def generate_research_data():
     base_demand = 100
     for d in dates:
         # Add Seasonality (Sine wave) + Random Noise
-        seasonality = 20 * np.sin(2 * np.pi * d.dayofyear / 365)
+        day_index = d.dayofyear
+        seasonality = 20 * np.sin(2 * np.pi * day_index / 365)
         noise = np.random.normal(0, 25)  # High variance
 
         # Christmas Spike (Nov-Dec)
@@ -49,7 +45,8 @@ def generate_research_data():
     # Story: Low volume, but extreme 'shocks' for Resilience Scoring
     base_demand = 50
     for d in dates:
-        if np.random.random() > 0.95:  # 5% chance of massive shock
+        # 5% chance of massive shock (e.g., pandemic spike or recall replacement)
+        if np.random.random() > 0.95:
             shock = 100
         else:
             shock = 0
@@ -63,49 +60,49 @@ def generate_research_data():
 
 def seed_database():
     try:
-        # Connect to Database
-        conn = psycopg2.connect(DB_URL)
+        # Use our robust v4.0.0 connection manager (Handles SSL & Fallbacks)
+        conn = db_manager.get_db_connection()
+        if not conn:
+            print("❌ Failed to connect via db_manager.")
+            return
+
         cur = conn.cursor()
+        print("🔌 Connected to Database via db_manager.")
 
-        print("🔌 Connected to Database.")
+        # 1. WIPE OLD DATA (Safe Reset)
+        # We use DELETE instead of TRUNCATE to avoid permission issues on some cloud tiers
+        print("🗑️  Clearing old simulation data...")
+        cur.execute("DELETE FROM inventory;")
 
-        # 1. CREATE TABLE IF MISSING (The Fix)
-        print("🛠️  Checking table schema...")
-        create_table_query = """
-        CREATE TABLE IF NOT EXISTS inventory_logs (
-            id SERIAL PRIMARY KEY,
-            date DATE NOT NULL,
-            product_name TEXT NOT NULL,
-            demand INTEGER NOT NULL
-        );
+        # 2. GENERATE & PREPARE DATA
+        raw_data = generate_research_data()
+
+        # Convert to DataFrame for bulk upload if needed, or raw insert
+        # We will use raw insert here for speed and simplicity
+        print(f"💾 Injecting {len(raw_data)} records into 'inventory' table...")
+
+        query = """
+            INSERT INTO inventory (date, product_name, demand) 
+            VALUES (%s, %s, %s)
         """
-        cur.execute(create_table_query)
 
-        # 2. WIPE OLD DATA
-        print("🗑️  Clearing old data...")
-        cur.execute("DELETE FROM inventory_logs;")
-
-        # 3. INSERT NEW DATA
-        print("💾 Injecting new Service Lane data...")
-        data = generate_research_data()
-
-        query = "INSERT INTO inventory_logs (date, product_name, demand) VALUES (%s, %s, %s)"
-        cur.executemany(query, data)
-
+        cur.executemany(query, raw_data)
         conn.commit()
-        print(f"✅ Success! {len(data)} records inserted.")
-        print("🚀 Your LSP Digital Twin is now running on research data.")
+
+        print(f"✅ Success! {len(raw_data)} records inserted.")
+        print("🚀 v4.0.0 is now populated with Multi-Modal Research Data.")
 
         cur.close()
         conn.close()
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error during seeding: {e}")
 
 
 if __name__ == "__main__":
-    confirm = input("⚠️  This will DELETE all existing data. Type 'yes' to proceed: ")
-    if confirm.lower() == "yes":
+    print("⚠️  WARNING: This will wipe the 'inventory' table on Render.")
+    confirm = input("Type 'yes' to proceed with Research Data Injection: ")
+    if confirm.lower().strip() == "yes":
         seed_database()
     else:
         print("❌ Operation cancelled.")
