@@ -7,25 +7,60 @@ from datetime import datetime
 
 # --- DATABASE CONNECTION ---
 def get_db_connection():
-    """Establishes a connection to the PostgreSQL database."""
+    """Establishes a connection to the PostgreSQL database with SSL fallback."""
+    url = os.getenv('DATABASE_URL')
+    if not url:
+        return None
+
     try:
-        url = os.getenv('DATABASE_URL')
-        if not url:
-            return None
+        # Standard connection
         conn = psycopg2.connect(url)
         return conn
-    except Exception as e:
-        print(f"❌ DB Connection Error: {e}")
-        return None
+    except Exception:
+        try:
+            # Fallback for local-to-cloud connections requiring SSL
+            conn = psycopg2.connect(url, sslmode='require')
+            return conn
+        except Exception as e:
+            print(f"❌ DB Connection Error: {e}")
+            return None
+
+
+# --- INITIALIZE DATABASE ---
+def init_db():
+    """
+    Initializes the database schema.
+    Ensures the 'inventory' table exists on the new Render instance.
+    """
+    conn = get_db_connection()
+    if conn:
+        try:
+            cur = conn.cursor()
+            # Standardizing table for v4.0.0 Research Artifact
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS inventory (
+                    id SERIAL PRIMARY KEY,
+                    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    product_name VARCHAR(255) NOT NULL,
+                    demand FLOAT DEFAULT 0,
+                    avg_demand FLOAT DEFAULT 0,
+                    std_dev FLOAT DEFAULT 0,
+                    lead_time FLOAT DEFAULT 0,
+                    service_level FLOAT DEFAULT 0.95
+                );
+            """)
+            conn.commit()
+            cur.close()
+            print("✅ Database Schema Verified.")
+        except Exception as e:
+            print(f"❌ Schema Initialization Error: {e}")
+        finally:
+            conn.close()
 
 
 # --- LOAD DATA ---
 def load_data(product_name=None):
-    """
-    Loads inventory data.
-    If product_name is provided, filters by that product.
-    Returns a DataFrame.
-    """
+    """Loads inventory data into a DataFrame."""
     conn = get_db_connection()
     if not conn:
         return pd.DataFrame()
@@ -38,12 +73,9 @@ def load_data(product_name=None):
             query += " WHERE product_name = %s"
             params = (product_name,)
 
-        # Order by date so charts look right
         query += " ORDER BY date ASC;"
-
         df = pd.read_sql(query, conn, params=params)
 
-        # Ensure date column is actual datetime objects
         if not df.empty and 'date' in df.columns:
             df['date'] = pd.to_datetime(df['date'])
 
@@ -80,18 +112,16 @@ def add_record(date_val, product, demand):
 
 # --- BULK IMPORT ---
 def bulk_import_csv(df):
-    """
-    Efficiently uploads a pandas DataFrame to the database.
-    Expected columns: date, product_name, demand
-    """
+    """Efficiently uploads a pandas DataFrame to the database."""
     conn = get_db_connection()
     if not conn:
         return False, "No Database Connection"
 
     try:
         cur = conn.cursor()
-        # Convert DataFrame to list of tuples for fast insertion
-        data_tuples = [tuple(x) for x in df[['date', 'product_name', 'demand']].to_numpy()]
+        # Ensure we only try to import columns that exist in the CSV
+        cols = ['date', 'product_name', 'demand']
+        data_tuples = [tuple(x) for x in df[cols].to_numpy()]
 
         query = "INSERT INTO inventory (date, product_name, demand) VALUES (%s, %s, %s)"
         cur.executemany(query, data_tuples)
@@ -107,7 +137,7 @@ def bulk_import_csv(df):
 
 # --- GET UNIQUE PRODUCTS ---
 def get_unique_products():
-    """Returns a list of unique product names for the dropdown."""
+    """Returns a list of unique product names for selection UI."""
     conn = get_db_connection()
     if not conn:
         return []
@@ -125,9 +155,9 @@ def get_unique_products():
         conn.close()
 
 
-# --- RESET DATABASE (DANGER) ---
+# --- RESET DATABASE ---
 def reset_database():
-    """Wipes all data. Used for the 'Factory Reset' button."""
+    """Wipes all data while keeping the schema intact."""
     conn = get_db_connection()
     if not conn:
         return False
@@ -147,7 +177,7 @@ def reset_database():
 
 # --- DELETE SPECIFIC RECORD ---
 def delete_record(record_id):
-    """Deletes a specific record by its unique ID (for fixing typos)."""
+    """Deletes a specific record by ID."""
     conn = get_db_connection()
     if conn:
         try:
