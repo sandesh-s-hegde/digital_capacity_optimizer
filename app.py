@@ -192,6 +192,19 @@ if source_option == "🔌 Live WMS Database":
         if st.button("🧨 Reset Database"):
             if db_manager.reset_database(): st.success("Reset"); st.rerun()
 
+# --- SYSTEM STATUS CHECK ---
+st.sidebar.divider()
+st.sidebar.subheader("📡 System Status")
+
+# We use db_manager because the function is defined in that module
+conn = db_manager.get_db_connection()
+
+if conn:
+    st.sidebar.success("Database: Connected (v16)")
+    conn.close()
+else:
+    st.sidebar.error("Database: Offline")
+
 st.sidebar.markdown("---")
 st.sidebar.header("🔧 LSP Constraints")
 
