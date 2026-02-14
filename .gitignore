@@ -4,7 +4,12 @@ __pycache__/
 *$py.class
 venv/
 env/
+.venv/
+
+# Security (CRITICAL)
 .env
+.env.txt
+.streamlit/secrets.toml
 
 # Distribution / Packaging
 build/
@@ -19,12 +24,7 @@ generate_csv.py
 # Streamlit
 .streamlit/
 
-# Distribution / Packaging
-dist/
-build/
-*.egg-info/
-
-# IDEs
+# IDEs & OS
 .vscode/
 .idea/
 .DS_Store
