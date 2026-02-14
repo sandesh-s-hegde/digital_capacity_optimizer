@@ -103,9 +103,9 @@ cd digital_capacity_optimizer
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Set your API Key (Create a .env file)
-# GOOGLE_API_KEY="AIzaSy..."
-# DATABASE_URL="postgresql://..."
+# 3. Set your API Key (Create a `.env` file in the root directory with the following keys:)
+# GEMINI_API_KEY="AIzaSy..."  | Your Render PostgreSQL connection string.
+# DATABASE_URL="postgresql://..."  | Your Gemini API key (Required for AI Chat).
 
 # 4. Generate Research Data (Optional)
 python seed_data.py
