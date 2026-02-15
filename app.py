@@ -249,7 +249,7 @@ partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0)
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 LSP Digital Twin | v4.0.0 | Robustness Analysis Edition")
+st.sidebar.caption("🟢 LSP Digital Twin | v4.0.0 | System: Frankfurt | Status: Online")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.info(
