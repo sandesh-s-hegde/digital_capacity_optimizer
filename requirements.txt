@@ -10,3 +10,5 @@ fpdf2
 scipy
 matplotlib
 geopy
+streamlit-searchbox
+googlemaps

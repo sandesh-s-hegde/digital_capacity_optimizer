@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from datetime import date
 from dotenv import load_dotenv
 from scipy.stats import norm
+from streamlit_searchbox import st_searchbox
 
 # --- IMPORT CUSTOM LOGIC MODULES ---
 import config
@@ -18,6 +19,8 @@ import profit_optimizer
 import map_viz
 import monte_carlo
 import network_design
+import urllib.parse
+import os
 
 # --- LOAD SECRETS ---
 load_dotenv()
@@ -365,7 +368,7 @@ if df is not None and not df.empty:
         st.warning("Please select a Service Lane.")
     else:
         # TAB DEFINITIONS - v3.8.0 (Unified USD)
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🚀 Control Tower", "📊 Risk Simulation", "🤖 AI Strategist", "📦 Inventory Policy", "🌍 Network Optimizer"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Capacity Hub", "💰 Profit Engine", "🔬 Research Lab", "🌏 Global Sourcing", "📍 Network Design"])
 
         # --- TAB 1: OPERATIONS ---
         with tab1:
@@ -628,46 +631,60 @@ if df is not None and not df.empty:
                 """
             render_chat_ui(df, metrics, extra_context=fta_context, key="fta_chat")
 
-        with tab5:
-            st.header("🌍 Strategic Network Design")
-            st.markdown(
-                "Optimize the location of a **Central Distribution Center (DC)** to minimize weighted transport distance.")
-
-            col1, col2 = st.columns([1, 2])
-
-            with col1:
-                st.subheader("📍 Demand Inputs")
-                # Default scenario: Germany/Poland cluster
-                default_data = [
-                    {"name": "Berlin", "lat": 52.52, "lon": 13.40, "demand": 1500},
-                    {"name": "Munich", "lat": 48.13, "lon": 11.58, "demand": 1200},
-                    {"name": "Hamburg", "lat": 53.55, "lon": 9.99, "demand": 900},
-                    {"name": "Warsaw", "lat": 52.22, "lon": 21.01, "demand": 1100},
-                    {"name": "Prague", "lat": 50.07, "lon": 14.43, "demand": 850}
-                ]
-
-                # Editable Data Table
-                input_df = st.data_editor(default_data, num_rows="dynamic", hide_index=True)
-
-                if st.button("📍 Calculate Optimal Location", type="primary"):
-                    # Run Optimization
-                    opt_lat, opt_lon = network_design.solve_center_of_gravity(input_df)
-
-                    st.success("Optimization Converged")
-                    st.metric("Optimal Latitude", f"{opt_lat:.4f}")
-                    st.metric("Optimal Longitude", f"{opt_lon:.4f}")
-
-                    # Save for plotting
-                    st.session_state['opt_coords'] = (opt_lat, opt_lon)
-                    st.session_state['net_data'] = input_df
-
-            with col2:
-                if 'opt_coords' in st.session_state:
-                    lat, lon = st.session_state['opt_coords']
-                    fig = network_design.generate_network_map(st.session_state['net_data'], lat, lon)
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.info("👈 Edit demand volumes and click Calculate to visualize the network.")
+        # # --- TAB 5: ROUTE INTELLIGENCE ---
+        # with tab5:
+        #     st.title("🗺️ Logistics Digital Twin: Network Designer")
+        #
+        #     # 1. Dashboard Layout: Inputs & Metrics (Left) | Map (Right)
+        #     col_left, col_right = st.columns([1.2, 2])
+        #
+        #     with col_left:
+        #         st.markdown("#### 🔍 Define Trade Lane")
+        #         with st.container(border=True):
+        #             origin = st_searchbox(network_design.search_google_places, key="main_o", placeholder="Origin City")
+        #             dest = st_searchbox(network_design.search_google_places, key="main_d",
+        #                                 placeholder="Destination City")
+        #
+        #             if origin: st.session_state['origin_val'] = origin
+        #             if dest: st.session_state['dest_val'] = dest
+        #
+        #             run_btn = st.button("🚀 Analyze Route", type="primary", use_container_width=True)
+        #
+        #         # 2. Results Detailing (Appears on the left under search)
+        #         if 'route_res' in st.session_state:
+        #             res = st.session_state['route_res']
+        #             m = res['metrics']
+        #
+        #             st.markdown(f"### 🏆 Winner: {res['recommendation']}")
+        #             st.divider()
+        #
+        #             # Detailing Cards for Road, Sea, and Air
+        #             for mode, label in [("road", "🚛 Road"), ("sea", "🚢 Sea"), ("air", "✈️ Air")]:
+        #                 if m[mode]['possible']:
+        #                     with st.expander(f"{label} Details", expanded=(res['recommendation'] == label.split()[1])):
+        #                         c1, c2 = st.columns(2)
+        #                         c1.metric("Landed Cost", f"${m[mode]['cost']:,.0f}")
+        #                         c1.caption(f"🌱 CO2: {m[mode]['co2']:.0f} kg")
+        #                         c2.metric("Transit Time", f"{m[mode]['time']:.1f} Days")
+        #
+        #     with col_right:
+        #         if 'route_res' in st.session_state:
+        #             res = st.session_state['route_res']
+        #             api_key = os.getenv("GOOGLE_API_KEY")
+        #
+        #             # URL Encoding to handle spaces and special characters
+        #             o_q = urllib.parse.quote(res['origin']['name'])
+        #             d_q = urllib.parse.quote(res['dest']['name'])
+        #
+        #             # PRODUCTION URL: Forces HTTPS and the Directions mode
+        #             embed_url = f"https://www.google.com/maps/embed/v1/directions?key={api_key}&origin={o_q}&destination={d_q}&mode=driving"
+        #
+        #             st.markdown("#### 📍 Live Transportation Route")
+        #
+        #             # Use st.components.v1.iframe with the new HTTPS URL
+        #             st.components.v1.iframe(embed_url, height=650, scrolling=False)
+        #         else:
+        #             st.info("👈 Enter search details to visualize the transportation line.")
 
 st.markdown("---")
 st.caption(f"© 2026 Logistics Research Lab | v4.0.0 | Robustness Analysis Edition")
