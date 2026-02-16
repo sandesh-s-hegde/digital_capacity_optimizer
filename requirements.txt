@@ -1,7 +1,7 @@
 streamlit>=1.31.0
 pandas
 numpy
-plotly
+plotly>=5.0.0
 python-dotenv
 sqlalchemy
 psycopg2-binary
@@ -9,3 +9,4 @@ google-generativeai
 fpdf2
 scipy
 matplotlib
+geopy
