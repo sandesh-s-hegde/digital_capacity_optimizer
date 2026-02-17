@@ -4,17 +4,19 @@ authors:
 - family-names: "Hegde"
   given-names: "Sandesh Subramanya"
 title: "LSP Digital Capacity Twin: Multi-Modal Stochastic Engine"
-version: 4.0.0
-date-released: 2026-02-12
+version: 4.2.0
+date-released: 2026-02-17
 url: "https://github.com/sandesh-s-hegde/digital_capacity_optimizer"
-abstract: "A Decision Support System (DSS) for Logistics Service Providers operationalizing supply chain resilience, horizontal cooperation, and multi-modal transport strategy. The artifact incorporates a Monte Carlo risk engine, carbon emission tracking (Green Logistics), and a Global Sourcing Simulator (China Plus One) to balance profit, speed, and geopolitical risk."
+abstract: "A Decision Support System (DSS) for Logistics Service Providers operationalizing supply chain resilience, horizontal cooperation, and multi-modal transport strategy. The artifact incorporates a Monte Carlo risk engine, carbon emission tracking (Green Logistics), and a Global Sourcing Simulator (China Plus One). Version 5.0.0 introduces a Geospatial Network Designer utilizing Google Maps for real-time routing, geopolitical constraint filtering (e.g., blocked borders), and a Generative AI consultant for strategic logistics explanation."
 keywords:
   - "Logistics Service Providers"
   - "Supply Chain Resilience"
   - "Multi-Modal Transport"
   - "Monte Carlo Simulation"
   - "Global Sourcing Strategy"
-  - "Free Trade Agreements (FTA)"
+  - "Geospatial Network Design"
+  - "Generative AI in Logistics"
+  - "Intermodal Routing"
   - "Green Logistics"
   - "Digital Twin"
 preferred-citation:
@@ -24,4 +26,4 @@ preferred-citation:
     given-names: "Sandesh Subramanya"
   title: "LSP Digital Capacity Twin: Multi-Modal Stochastic Engine"
   year: 2026
-  version: 4.0.0
+  version: 4.2.0

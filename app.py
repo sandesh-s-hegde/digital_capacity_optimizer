@@ -253,7 +253,7 @@ partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0)
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 LSP Digital Twin | v4.0.0 | System: Frankfurt | Status: Online")
+st.sidebar.caption("🟢 LSP Digital Twin | v4.2.0 | System: Frankfurt | Status: Online")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.info(
@@ -778,7 +778,7 @@ if df is not None and not df.empty:
                             st.warning("Please analyze a route first so I have data to discuss!")
 
 st.markdown("---")
-st.caption(f"© 2026 Logistics Research Lab | v4.0.0 | Robustness Analysis Edition")
+st.caption(f"© 2026 Logistics Research Lab | v4.2.0 | Network Designer Edition")
 
 if source_option == "🔌 Live WMS Database" and df is not None:
     with st.expander("🔍 Inspect Warehouse Logs"):

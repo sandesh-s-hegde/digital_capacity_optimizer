@@ -1,6 +1,6 @@
 """
 LSP Digital Capacity Twin: inventory_math.py
-Version: 4.0.0 (Stable Release)
+Version: 4.2.0 (Stable Release)
 ===========================================
 Core mathematical engine for stochastic optimization,
 sustainability impact, and customer loyalty metrics.
@@ -24,7 +24,7 @@ def calculate_newsvendor_target(holding_cost, stockout_cost):
 def calculate_advanced_safety_stock(avg_demand, std_dev, lt, lt_sigma, sla):
     """
     Calculates Risk-Adjusted Safety Stock using the RSS (Root Sum of Squares) method.
-    Harden version for v4.0.0 to prevent domain errors on zero demand or invalid SLAs.
+    Harden version for v4.2.0 to prevent domain errors on zero demand or invalid SLAs.
     """
     if avg_demand <= 0 or sla >= 1.0 or sla <= 0:
         return 0  # Return 0 instead of crashing on edge cases or undefined Z-scores

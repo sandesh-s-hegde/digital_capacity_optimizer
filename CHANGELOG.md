@@ -2,6 +2,20 @@
 
 All notable changes to the "Financial Digital Twin" research artifact will be documented in this file.
 
+## [5.0.0] - 2026-02-17
+### Added
+- **Geospatial Network Designer:** Integration with Google Maps Platform for live trade lane visualization and interactive route analysis.
+- **Geopolitical Logic Engine:** Automated filtering for blocked commercial borders (e.g., India-Pakistan) and conflict zones.
+- **Logistics AI Companion:** Embedded Gemini 1.5 Flash consultant to explain routing constraints, customs delays, and supply chain trade-offs.
+- **Intermodal Realism:** New deterministic logic accounting for port drayage, vessel frequency buffers (weekly sailings), and mandatory customs processing times.
+- **Open Border Exceptions:** Specialized routing rules for EU Schengen and NAFTA zones allowing long-haul trucking (>3,500km) based on regional trade agreements.
+- **Landlocked Validation:** Automated exclusion of Sea freight modes for landlocked nations (e.g., Nepal, Bhutan, Switzerland) to ensure model accuracy.
+
+### Changed
+- **UI Architecture:** Redesigned Tab 5 into a split-screen dashboard layout (Inputs & Metrics on Left | Interactive Map on Right).
+- **State Management:** Implemented `st.session_state` persistence for Search Inputs and AI Chat history to prevent data loss on interface reruns.
+- **Security:** Decoupled Maps and AI API authentication to support separate restriction policies for Google Cloud and AI Studio.
+
 ## [4.0.0] - 2026-02-12
 ### Added
 - **Global Sourcing Simulator:** CBAM and FTA impact modeling.
