@@ -632,110 +632,150 @@ if df is not None and not df.empty:
             render_chat_ui(df, metrics, extra_context=fta_context, key="fta_chat")
 
         # --- TAB 5: ROUTE INTELLIGENCE ---
-        with tab5:
-            st.title("🗺️ Logistics Digital Twin: Network Designer")
-            # --- ADDED NOTE HERE ---
-            st.caption(
-                "ℹ️ **Note:** This tool is hosted on a free-tier instance. If the map or analysis takes a moment to load, please be patient—the code is calculating complex routes live!")
-            # -----------------------
+            with tab5:
+                st.title("🗺️ Logistics Digital Twin: Network Designer")
 
-            # 1. Dashboard Layout: Inputs (Left) | Map (Right)
-            col_left, col_right = st.columns([1.2, 2])
+                # Advisory Note
+                st.caption(
+                    "ℹ️ **Note:** This tool is hosted on a free-tier instance. If the map takes a moment to load, please be patient—the code is calculating complex routes live!")
 
-            with col_left:
-                st.markdown("#### 🔍 Define Trade Lane")
-                with st.container(border=True):
-                    # SEARCH BOXES
-                    origin = st_searchbox(
-                        network_design.search_google_places,
-                        key="tab5_origin_search_final",
-                        placeholder="Origin City"
-                    )
-                    dest = st_searchbox(
-                        network_design.search_google_places,
-                        key="tab5_dest_search_final",
-                        placeholder="Destination City"
-                    )
+                # --- MAIN LAYOUT (Split Screen) ---
+                col_left, col_right = st.columns([1.2, 2])
 
-                    # PERSIST SELECTION
-                    if origin: st.session_state['origin_val'] = origin
-                    if dest: st.session_state['dest_val'] = dest
+                # LEFT COLUMN: Inputs & Metrics
+                with col_left:
+                    st.markdown("#### 🔍 Define Trade Lane")
+                    with st.container(border=True):
+                        # Search Boxes
+                        origin = st_searchbox(
+                            network_design.search_google_places,
+                            key="tab5_origin_search_final",
+                            placeholder="Origin City"
+                        )
+                        dest = st_searchbox(
+                            network_design.search_google_places,
+                            key="tab5_dest_search_final",
+                            placeholder="Destination City"
+                        )
 
-                    # ANALYZE BUTTON
-                    if st.button("🚀 Analyze Route", type="primary", use_container_width=True):
-                        if st.session_state.get('origin_val') and st.session_state.get('dest_val'):
-                            with st.spinner("Calculating Logistics Path..."):
-                                # Run Analysis
-                                st.session_state['route_res'] = network_design.analyze_route(
-                                    st.session_state['origin_val'],
-                                    st.session_state['dest_val']
-                                )
+                        # Persist Selection
+                        if origin: st.session_state['origin_val'] = origin
+                        if dest: st.session_state['dest_val'] = dest
+
+                        # Analyze Button
+                        if st.button("🚀 Analyze Route", type="primary", use_container_width=True):
+                            if st.session_state.get('origin_val') and st.session_state.get('dest_val'):
+                                with st.spinner("Calculating Logistics Path..."):
+                                    try:
+                                        st.session_state['route_res'] = network_design.analyze_route(
+                                            st.session_state['origin_val'],
+                                            st.session_state['dest_val']
+                                        )
+                                    except Exception as e:
+                                        st.error(f"Analysis Error: {e}")
+                            else:
+                                st.error("Please select both origin and destination.")
+
+                    # Metric Results (Appears below search boxes)
+                    if 'route_res' in st.session_state:
+                        res = st.session_state['route_res']
+                        if "error" in res:
+                            st.error(res['error'])
                         else:
-                            st.error("Please select both origin and destination.")
+                            m = res['metrics']
+                            st.divider()
+                            st.markdown(f"### 🏆 Strategy: {res['recommendation']}")
+                            st.caption(f"Reasoning: {res['reason']}")
 
-                # 2. RESULTS DETAILING
-                if 'route_res' in st.session_state:
-                    res = st.session_state['route_res']
+                            # ROAD CARD
+                            if m['road']['possible']:
+                                with st.container(border=True):
+                                    st.write("🚛 **ROAD**")
+                                    c1, c2 = st.columns(2)
+                                    c1.metric("Cost", f"${m['road']['cost']:,.0f}")
+                                    c2.metric("Time", f"{m['road']['time']:.1f} Days")
+                                    st.progress(min(m['road']['co2'] / 5000, 1.0),
+                                                text=f"Carbon: {int(m['road']['co2'])}kg")
 
-                    if "error" in res:
-                        st.error(res['error'])
+                            # SEA CARD
+                            if m['sea']['possible']:
+                                with st.container(border=True):
+                                    st.write("🚢 **SEA**")
+                                    c1, c2 = st.columns(2)
+                                    c1.metric("Cost", f"${m['sea']['cost']:,.0f}", delta="-Low")
+                                    c2.metric("Time", f"{m['sea']['time']:.1f} Days")
+                                    st.progress(min(m['sea']['co2'] / 5000, 1.0),
+                                                text=f"Carbon: {int(m['sea']['co2'])}kg")
+
+                            # AIR CARD
+                            if m['air']['possible']:
+                                with st.container(border=True):
+                                    st.write("✈️ **AIR**")
+                                    c1, c2 = st.columns(2)
+                                    c1.metric("Cost", f"${m['air']['cost']:,.0f}", delta="High", delta_color="inverse")
+                                    c2.metric("Time", f"{m['air']['time']:.1f} Days")
+                                    st.progress(min(m['air']['co2'] / 5000, 1.0),
+                                                text=f"Carbon: {int(m['air']['co2'])}kg")
+
+                            if res['recommendation'] == "None":
+                                st.warning("🚫 No valid commercial route found.")
+
+                # RIGHT COLUMN: Map
+                with col_right:
+                    st.markdown("#### 📍 Live Transportation Route")
+
+                    if 'route_res' in st.session_state and 'error' not in st.session_state['route_res']:
+                        res = st.session_state['route_res']
+                        api_key = os.getenv("GOOGLE_API_KEY")
+
+                        if not api_key:
+                            st.error("⚠️ Google API Key missing.")
+                        else:
+                            o_q = urllib.parse.quote(res['origin']['name'])
+                            d_q = urllib.parse.quote(res['dest']['name'])
+                            embed_url = f"https://www.google.com/maps/embed/v1/directions?key={api_key}&origin={o_q}&destination={d_q}&mode=driving"
+                            st.components.v1.iframe(embed_url, height=700)
                     else:
-                        m = res['metrics']
+                        st.info("👈 Enter origin and destination to visualize the trade lane.")
 
-                        st.divider()
-                        st.markdown(f"### 🏆 Strategy: {res['recommendation']}")
-                        st.caption(f"Reasoning: {res['reason']}")
+                # --- AI COMPANION SECTION (Full Width, Bottom of Page) ---
+                st.divider()
+                st.subheader("💬 LSP Strategy Assistant")
+                st.caption(
+                    "Ask questions about this specific route (e.g., 'Why is the sea route 18 days?', 'What are the border risks?').")
 
-                        # ROAD CARD
-                        if m['road']['possible']:
-                            with st.container(border=True):
-                                st.write("🚛 **ROAD**")
-                                c1, c2 = st.columns(2)
-                                c1.metric("Cost", f"${m['road']['cost']:,.0f}")
-                                c2.metric("Time", f"{m['road']['time']:.1f} Days")
-                                st.progress(min(m['road']['co2'] / 5000, 1.0),
-                                            text=f"Carbon: {int(m['road']['co2'])}kg")
+                # Initialize chat history
+                if "logistics_chat_history" not in st.session_state:
+                    st.session_state.logistics_chat_history = []
 
-                        # SEA CARD
-                        if m['sea']['possible']:
-                            with st.container(border=True):
-                                st.write("🚢 **SEA**")
-                                c1, c2 = st.columns(2)
-                                c1.metric("Cost", f"${m['sea']['cost']:,.0f}", delta="-Low")
-                                c2.metric("Time", f"{m['sea']['time']:.1f} Days")
-                                st.progress(min(m['sea']['co2'] / 5000, 1.0), text=f"Carbon: {int(m['sea']['co2'])}kg")
+                # Display chat messages
+                for role, text in st.session_state.logistics_chat_history:
+                    with st.chat_message(role):
+                        st.markdown(text)
 
-                        # AIR CARD
-                        if m['air']['possible']:
-                            with st.container(border=True):
-                                st.write("✈️ **AIR**")
-                                c1, c2 = st.columns(2)
-                                c1.metric("Cost", f"${m['air']['cost']:,.0f}", delta="High", delta_color="inverse")
-                                c2.metric("Time", f"{m['air']['time']:.1f} Days")
-                                st.progress(min(m['air']['co2'] / 5000, 1.0), text=f"Carbon: {int(m['air']['co2'])}kg")
+                # Chat Input
+                if prompt := st.chat_input("Ask about this trade lane..."):
+                    # 1. User Message
+                    st.session_state.logistics_chat_history.append(("user", prompt))
+                    with st.chat_message("user"):
+                        st.markdown(prompt)
 
-                        if res['recommendation'] == "None":
-                            st.warning("🚫 No valid commercial route found for these parameters.")
-
-            with col_right:
-                st.markdown("#### 📍 Live Transportation Route")
-
-                if 'route_res' in st.session_state and 'error' not in st.session_state['route_res']:
-                    res = st.session_state['route_res']
-                    api_key = os.getenv("GOOGLE_API_KEY")
-
-                    if not api_key:
-                        st.error("⚠️ Google API Key missing in .env file")
+                    # 2. AI Response
+                    if 'route_res' in st.session_state:
+                        with st.chat_message("assistant"):
+                            with st.spinner("Analyzing logistics data..."):
+                                # Call the AI function from network_design.py
+                                try:
+                                    response = network_design.ask_gemini_logistics(prompt,
+                                                                                   st.session_state['route_res'])
+                                    st.markdown(response)
+                                    st.session_state.logistics_chat_history.append(("assistant", response))
+                                except Exception as e:
+                                    st.error(f"AI Error: {e}")
                     else:
-                        o_q = urllib.parse.quote(res['origin']['name'])
-                        d_q = urllib.parse.quote(res['dest']['name'])
-
-                        # MAP EMBED
-                        embed_url = f"https://www.google.com/maps/embed/v1/directions?key={api_key}&origin={o_q}&destination={d_q}&mode=driving"
-
-                        st.components.v1.iframe(embed_url, height=700)
-                else:
-                    st.info("👈 Enter origin and destination to visualize the trade lane.")
+                        # Fallback if no route is analyzed yet
+                        with st.chat_message("assistant"):
+                            st.warning("Please analyze a route first so I have data to discuss!")
 
 st.markdown("---")
 st.caption(f"© 2026 Logistics Research Lab | v4.0.0 | Robustness Analysis Edition")
