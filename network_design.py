@@ -1,17 +1,47 @@
 import googlemaps
-from datetime import datetime
 from geopy.distance import geodesic
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
-gmaps = googlemaps.Client(key=os.getenv("GOOGLE_API_KEY"))
+API_KEY = os.getenv("GOOGLE_API_KEY")
+
+try:
+    gmaps = googlemaps.Client(key=API_KEY)
+except:
+    gmaps = None
+
+# --- 1. GLOBAL CONFIGURATION ---
+
+# A. Landlocked Countries (Cannot use Sea directly)
+LANDLOCKED = {
+    "NP", "BT", "AF", "KG", "TJ", "UZ", "KZ", "MN",  # Asia
+    "CH", "AT", "HU", "SK", "CZ", "RS", "MK", "BY",  # Europe
+    "RW", "UG", "ET", "SS", "BF", "NE", "ZM", "ZW",  # Africa
+    "BO", "PY"  # South America
+}
+
+# B. Open Border / Free Trade Zones (Long-Haul Trucking Permitted > 3500km)
+OPEN_BORDERS = {
+    "FR", "DE", "ES", "IT", "PL", "NL", "BE", "AT", "DK", "SE", "NO", "FI",
+    "PT", "GR", "CZ", "HU", "RO", "BG", "HR", "SI", "SK", "EE", "LV", "LT",
+    "IE", "CH", "UK", "GB", "US", "CA", "MX", "AU"
+}
+
+# C. Blocked Geopolitical Borders (Trucking Impossible even if road exists)
+# These pairs cannot trade by road due to conflict or closed borders
+BLOCKED_PAIRS = [
+    {"IN", "PK"},  # India - Pakistan (Blocks road to Middle East/Europe)
+    {"IN", "CN"},  # India - China (Himalayan border closed for trucks)
+    {"KR", "KP"},  # Korea
+    {"UA", "RU"},  # Conflict Zone
+    {"IL", "LB"}, {"IL", "SY"}  # Middle East closed borders
+]
 
 
 def search_google_places(search_term: str):
-    """Provides dynamic city suggestions for the search box."""
-    if not gmaps or not search_term or len(search_term) < 2:
-        return []
+    """Auto-complete for the UI."""
+    if not gmaps or not search_term or len(search_term) < 2: return []
     try:
         response = gmaps.places_autocomplete(input_text=search_term, types='(cities)')
         return [place['description'] for place in response]
@@ -19,58 +49,169 @@ def search_google_places(search_term: str):
         return []
 
 
-def get_google_coords(place_name):
-    """Converts location strings into coordinates."""
+def get_location_details(place_name):
+    """Gets Lat/Lon and Country Code."""
+    if not gmaps: return None
     try:
         res = gmaps.geocode(place_name)
         if res:
-            loc = res[0]['geometry']['location']
-            return {"name": res[0]['formatted_address'], "lat": loc['lat'], "lon": loc['lng']}
+            data = res[0]
+            loc = data['geometry']['location']
+            country = "XX"
+            for comp in data['address_components']:
+                if 'country' in comp['types']:
+                    country = comp['short_name']
+                    break
+            return {
+                "name": data['formatted_address'],
+                "lat": loc['lat'],
+                "lon": loc['lng'],
+                "country": country
+            }
     except:
         return None
 
 
+def get_real_road_distance(origin, dest):
+    """Asks Google: Is there a road?"""
+    try:
+        directions = gmaps.directions(origin, dest, mode="driving")
+        if directions:
+            return directions[0]['legs'][0]['distance']['value'] / 1000
+    except:
+        pass
+    return None
+
+
 def analyze_route(origin_addr, dest_addr):
-    """Calculates detailed logistics KPIs including Landed Cost and CO2."""
-    o_data = get_google_coords(origin_addr)
-    d_data = get_google_coords(dest_addr)
+    """
+    MASTER LOGIC ENGINE
+    """
+    o_data = get_location_details(origin_addr)
+    d_data = get_location_details(dest_addr)
 
-    if not o_data or not d_data:
-        return {"error": "Locations not found."}
+    if not o_data or not d_data: return {"error": "Locations not found."}
 
-    # Great Circle Distance for baseline
+    # 1. BASELINE DATA
     gc_dist = geodesic((o_data['lat'], o_data['lon']), (d_data['lat'], d_data['lon'])).km
+    road_km = get_real_road_distance(o_data['name'], d_data['name'])
 
-    # Mode-Specific Detailing
-    # Road (Trucking)
-    road_dist = gc_dist * 1.25
-    # Sea (Maritime Lanes)
-    sea_dist = gc_dist * 1.6
-    # Air (Direct flight path)
-    air_dist = gc_dist * 1.05
+    # Identify Country Pair for blocking logic
+    current_pair = {o_data['country'], d_data['country']}
+
+    # --- 2. ROAD LOGIC ---
+    road_possible = False
+    road_metrics = {"cost": 0, "time": 0, "co2": 0}
+
+    if road_km:
+        road_possible = True
+
+        # RULE 1: Max Distance Cap
+        limit = 3500
+        # Exception: Open Borders allow longer trucking
+        if o_data['country'] in OPEN_BORDERS and d_data['country'] in OPEN_BORDERS:
+            limit = 7000
+
+        if road_km > limit:
+            road_possible = False
+
+        # RULE 2: Blocked Borders (Geopolitics)
+        for blocked in BLOCKED_PAIRS:
+            # If the set of countries matches a blocked pair
+            if blocked == current_pair:
+                road_possible = False
+                break
+
+        # If India -> Middle East/Europe, it usually routes via Pakistan. Block it.
+        # (Simplified heuristic: If Origin is IN and Dest is far West, block road)
+        if o_data['country'] == 'IN' and d_data['country'] not in ['IN', 'NP', 'BT', 'BD']:
+            if road_km > 2000: road_possible = False
+
+        if road_possible:
+            # TIME: 500km/day + 1 day load + Border Penalty
+            border_penalty = 0
+            if o_data['country'] != d_data['country']:
+                if o_data['country'] not in OPEN_BORDERS or d_data['country'] not in OPEN_BORDERS:
+                    border_penalty = 2.0  # 2 days customs for non-open borders
+
+            road_time = 1.0 + (road_km / 500) + border_penalty
+            road_cost = 200 + (road_km * 1.1)
+            road_metrics = {"cost": road_cost, "time": road_time, "co2": road_km * 0.105}
+
+    # --- 3. SEA LOGIC ---
+    sea_possible = True
+
+    # RULE 1: Landlocked
+    if o_data['country'] in LANDLOCKED or d_data['country'] in LANDLOCKED:
+        sea_possible = False
+
+    # RULE 2: Too Short
+    if gc_dist < 800:
+        sea_possible = False
+
+    # RULE 3: Domestic (Unless huge coast like US/China)
+    if o_data['country'] == d_data['country'] and gc_dist < 3000:
+        sea_possible = False
+
+    sea_metrics = {"cost": 0, "time": 0, "co2": 0}
+    if sea_possible:
+        sea_dist = gc_dist * 1.6
+
+        # Drayage: Trucking to/from port (e.g. Bengaluru to Chennai)
+        drayage_time = 3.0  # 1.5 days each side
+        port_handling = 8.0  # 4 days each side
+        frequency_buffer = 3.0  # Avg wait for ship
+
+        sea_time = port_handling + drayage_time + frequency_buffer + (sea_dist / 35 / 24)
+        sea_cost = 600 + (sea_dist * 0.15)  # + Drayage costs included in base
+        sea_metrics = {"cost": sea_cost, "time": sea_time, "co2": sea_dist * 0.015}
+
+    # --- 4. AIR LOGIC ---
+    air_possible = True
+    if gc_dist < 400: air_possible = False  # Too short
+
+    air_metrics = {"cost": 0, "time": 0, "co2": 0}
+    if air_possible:
+        air_dist = gc_dist * 1.05
+        # 2 days export + 2 days import + flight
+        air_time = 4.0 + (air_dist / 800 / 24)
+        air_cost = 800 + (air_dist * 4.5)
+        air_metrics = {"cost": air_cost, "time": air_time, "co2": air_dist * 0.600}
+
+    # --- 5. RECOMMENDATION ---
+    rec = "Road"
+    reason = "Regional standard."
+
+    if not road_possible and not sea_possible and not air_possible:
+        rec = "None"
+        reason = "No commercial route found."
+
+    # Priority 1: Short Haul Road
+    elif road_possible and road_km < 1200:
+        rec = "Road"
+        reason = "Short-Haul: Trucking is fastest."
+
+    # Priority 2: Sea (Cost)
+    elif sea_possible:
+        rec = "Sea"
+        reason = "Long-Haul: Ocean Freight (Cost Optimal)."
+
+    # Priority 3: Air (Urgency/Landlocked)
+    elif air_possible:
+        rec = "Air"
+        reason = "Landlocked/Urgent: Air Freight."
+
+    # Priority 4: Long Haul Road (Open Borders)
+    elif road_possible:
+        rec = "Road"
+        reason = "Long-Haul Trucking."
 
     return {
-        "origin": o_data,
-        "dest": d_data,
-        "recommendation": "Air" if gc_dist > 3500 else "Road",
+        "origin": o_data, "dest": d_data,
+        "recommendation": rec, "reason": reason,
         "metrics": {
-            "road": {
-                "possible": True if gc_dist < 4500 else False,
-                "time": road_dist / 55 / 24,  # Days
-                "cost": 200 + (road_dist * 0.95),
-                "co2": road_dist * 0.08  # kg CO2
-            },
-            "sea": {
-                "possible": True if gc_dist > 800 else False,
-                "time": 7 + (sea_dist / 25 / 24),  # Handling + Days
-                "cost": 350 + (sea_dist * 0.12),
-                "co2": sea_dist * 0.01
-            },
-            "air": {
-                "possible": True if gc_dist > 400 else False,
-                "time": 1.5 + (air_dist / 800 / 24),  # Handling + Days
-                "cost": 500 + (air_dist * 4.2),
-                "co2": air_dist * 0.6
-            }
+            "road": {"possible": road_possible, **road_metrics},
+            "sea": {"possible": sea_possible, **sea_metrics},
+            "air": {"possible": air_possible, **air_metrics}
         }
     }
