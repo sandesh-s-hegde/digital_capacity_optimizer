@@ -2,12 +2,15 @@ import googlemaps
 from geopy.distance import geodesic
 import os
 from dotenv import load_dotenv
+import google.generativeai as genai
 
 load_dotenv()
 API_KEY = os.getenv("GOOGLE_API_KEY")
 
+# Configure APIs
 try:
     gmaps = googlemaps.Client(key=API_KEY)
+    genai.configure(api_key=API_KEY)
 except:
     gmaps = None
 
@@ -29,7 +32,7 @@ OPEN_BORDERS = {
 }
 
 # C. Blocked Geopolitical Borders (Trucking Impossible even if road exists)
-# These pairs cannot trade by road due to conflict or closed borders
+# Using list of sets for bidirectional blocking
 BLOCKED_PAIRS = [
     {"IN", "PK"},  # India - Pakistan (Blocks road to Middle East/Europe)
     {"IN", "CN"},  # India - China (Himalayan border closed for trucks)
@@ -86,6 +89,7 @@ def get_real_road_distance(origin, dest):
 def analyze_route(origin_addr, dest_addr):
     """
     MASTER LOGIC ENGINE
+    Calculates realistic time/cost for Road, Sea, and Air.
     """
     o_data = get_location_details(origin_addr)
     d_data = get_location_details(dest_addr)
@@ -117,22 +121,20 @@ def analyze_route(origin_addr, dest_addr):
 
         # RULE 2: Blocked Borders (Geopolitics)
         for blocked in BLOCKED_PAIRS:
-            # If the set of countries matches a blocked pair
             if blocked == current_pair:
                 road_possible = False
                 break
 
-        # If India -> Middle East/Europe, it usually routes via Pakistan. Block it.
-        # (Simplified heuristic: If Origin is IN and Dest is far West, block road)
+        # Specific India Rule: If routing West (not NP/BT/BD), usually blocked by PK logic
         if o_data['country'] == 'IN' and d_data['country'] not in ['IN', 'NP', 'BT', 'BD']:
             if road_km > 2000: road_possible = False
 
         if road_possible:
-            # TIME: 500km/day + 1 day load + Border Penalty
+            # TIME: 500km/day (Driver Limits) + 1 day load + Border Penalty
             border_penalty = 0
             if o_data['country'] != d_data['country']:
                 if o_data['country'] not in OPEN_BORDERS or d_data['country'] not in OPEN_BORDERS:
-                    border_penalty = 2.0  # 2 days customs for non-open borders
+                    border_penalty = 2.0  # 2 days customs
 
             road_time = 1.0 + (road_km / 500) + border_penalty
             road_cost = 200 + (road_km * 1.1)
@@ -149,7 +151,7 @@ def analyze_route(origin_addr, dest_addr):
     if gc_dist < 800:
         sea_possible = False
 
-    # RULE 3: Domestic (Unless huge coast like US/China)
+    # RULE 3: Domestic (Unless huge coast)
     if o_data['country'] == d_data['country'] and gc_dist < 3000:
         sea_possible = False
 
@@ -157,13 +159,13 @@ def analyze_route(origin_addr, dest_addr):
     if sea_possible:
         sea_dist = gc_dist * 1.6
 
-        # Drayage: Trucking to/from port (e.g. Bengaluru to Chennai)
-        drayage_time = 3.0  # 1.5 days each side
-        port_handling = 8.0  # 4 days each side
-        frequency_buffer = 3.0  # Avg wait for ship
+        # TIME: Port Handling (8 days) + Drayage (3 days) + Buffer (3 days) + Sailing
+        drayage_time = 3.0
+        port_handling = 8.0
+        frequency_buffer = 3.0
 
         sea_time = port_handling + drayage_time + frequency_buffer + (sea_dist / 35 / 24)
-        sea_cost = 600 + (sea_dist * 0.15)  # + Drayage costs included in base
+        sea_cost = 600 + (sea_dist * 0.15)
         sea_metrics = {"cost": sea_cost, "time": sea_time, "co2": sea_dist * 0.015}
 
     # --- 4. AIR LOGIC ---
@@ -173,7 +175,7 @@ def analyze_route(origin_addr, dest_addr):
     air_metrics = {"cost": 0, "time": 0, "co2": 0}
     if air_possible:
         air_dist = gc_dist * 1.05
-        # 2 days export + 2 days import + flight
+        # TIME: 4 days processing + Flight
         air_time = 4.0 + (air_dist / 800 / 24)
         air_cost = 800 + (air_dist * 4.5)
         air_metrics = {"cost": air_cost, "time": air_time, "co2": air_dist * 0.600}
@@ -215,3 +217,44 @@ def analyze_route(origin_addr, dest_addr):
             "air": {"possible": air_possible, **air_metrics}
         }
     }
+
+
+def ask_gemini_logistics(user_question, route_context):
+    """
+    Sends the calculated route data + user question to Gemini for a realistic explanation.
+    """
+    try:
+        # 1. LOAD THE SPECIFIC AI KEY (Not the Maps Key)
+        ai_key = os.getenv("GEMINI_API_KEY")
+        if not ai_key:
+            return "⚠️ Error: Missing GEMINI_API_KEY in .env file."
+
+        # 2. CONFIGURE WITH AI KEY
+        genai.configure(api_key=ai_key)
+
+        # 3. USE THE MODEL
+        model = genai.GenerativeModel('gemini-flash-latest')
+
+        # Feed calculated metrics into the prompt for grounding
+        context_str = f"""
+        You are a Logistics Expert AI. You are analyzing a route from {route_context['origin']['name']} to {route_context['dest']['name']}.
+
+        DATA CONTEXT:
+        - Recommended Mode: {route_context['recommendation']} ({route_context['reason']})
+        - Road Data: {route_context['metrics']['road']}
+        - Sea Data: {route_context['metrics']['sea']}
+        - Air Data: {route_context['metrics']['air']}
+
+        USER QUESTION: "{user_question}"
+
+        INSTRUCTIONS:
+        Answer strictly based on supply chain logic. Explain the data.
+        If Road is impossible, explain why (e.g. "Too long for trucking" or "Geopolitical block").
+        If Sea takes long, mention "Port congestion" or "Drayage".
+        Keep it professional, concise, and helpful.
+        """
+
+        response = model.generate_content(context_str)
+        return response.text
+    except Exception as e:
+        return f"⚠️ AI Service Unavailable: {str(e)}"
