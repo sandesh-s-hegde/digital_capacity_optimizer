@@ -631,60 +631,111 @@ if df is not None and not df.empty:
                 """
             render_chat_ui(df, metrics, extra_context=fta_context, key="fta_chat")
 
-        # # --- TAB 5: ROUTE INTELLIGENCE ---
-        # with tab5:
-        #     st.title("🗺️ Logistics Digital Twin: Network Designer")
-        #
-        #     # 1. Dashboard Layout: Inputs & Metrics (Left) | Map (Right)
-        #     col_left, col_right = st.columns([1.2, 2])
-        #
-        #     with col_left:
-        #         st.markdown("#### 🔍 Define Trade Lane")
-        #         with st.container(border=True):
-        #             origin = st_searchbox(network_design.search_google_places, key="main_o", placeholder="Origin City")
-        #             dest = st_searchbox(network_design.search_google_places, key="main_d",
-        #                                 placeholder="Destination City")
-        #
-        #             if origin: st.session_state['origin_val'] = origin
-        #             if dest: st.session_state['dest_val'] = dest
-        #
-        #             run_btn = st.button("🚀 Analyze Route", type="primary", use_container_width=True)
-        #
-        #         # 2. Results Detailing (Appears on the left under search)
-        #         if 'route_res' in st.session_state:
-        #             res = st.session_state['route_res']
-        #             m = res['metrics']
-        #
-        #             st.markdown(f"### 🏆 Winner: {res['recommendation']}")
-        #             st.divider()
-        #
-        #             # Detailing Cards for Road, Sea, and Air
-        #             for mode, label in [("road", "🚛 Road"), ("sea", "🚢 Sea"), ("air", "✈️ Air")]:
-        #                 if m[mode]['possible']:
-        #                     with st.expander(f"{label} Details", expanded=(res['recommendation'] == label.split()[1])):
-        #                         c1, c2 = st.columns(2)
-        #                         c1.metric("Landed Cost", f"${m[mode]['cost']:,.0f}")
-        #                         c1.caption(f"🌱 CO2: {m[mode]['co2']:.0f} kg")
-        #                         c2.metric("Transit Time", f"{m[mode]['time']:.1f} Days")
-        #
-        #     with col_right:
-        #         if 'route_res' in st.session_state:
-        #             res = st.session_state['route_res']
-        #             api_key = os.getenv("GOOGLE_API_KEY")
-        #
-        #             # URL Encoding to handle spaces and special characters
-        #             o_q = urllib.parse.quote(res['origin']['name'])
-        #             d_q = urllib.parse.quote(res['dest']['name'])
-        #
-        #             # PRODUCTION URL: Forces HTTPS and the Directions mode
-        #             embed_url = f"https://www.google.com/maps/embed/v1/directions?key={api_key}&origin={o_q}&destination={d_q}&mode=driving"
-        #
-        #             st.markdown("#### 📍 Live Transportation Route")
-        #
-        #             # Use st.components.v1.iframe with the new HTTPS URL
-        #             st.components.v1.iframe(embed_url, height=650, scrolling=False)
-        #         else:
-        #             st.info("👈 Enter search details to visualize the transportation line.")
+        # --- TAB 5: ROUTE INTELLIGENCE ---
+        with tab5:
+            st.title("🗺️ Logistics Digital Twin: Network Designer")
+            # --- ADDED NOTE HERE ---
+            st.caption(
+                "ℹ️ **Note:** This tool is hosted on a free-tier instance. If the map or analysis takes a moment to load, please be patient—the code is calculating complex routes live!")
+            # -----------------------
+
+            # 1. Dashboard Layout: Inputs (Left) | Map (Right)
+            col_left, col_right = st.columns([1.2, 2])
+
+            with col_left:
+                st.markdown("#### 🔍 Define Trade Lane")
+                with st.container(border=True):
+                    # SEARCH BOXES
+                    origin = st_searchbox(
+                        network_design.search_google_places,
+                        key="tab5_origin_search_final",
+                        placeholder="Origin City"
+                    )
+                    dest = st_searchbox(
+                        network_design.search_google_places,
+                        key="tab5_dest_search_final",
+                        placeholder="Destination City"
+                    )
+
+                    # PERSIST SELECTION
+                    if origin: st.session_state['origin_val'] = origin
+                    if dest: st.session_state['dest_val'] = dest
+
+                    # ANALYZE BUTTON
+                    if st.button("🚀 Analyze Route", type="primary", use_container_width=True):
+                        if st.session_state.get('origin_val') and st.session_state.get('dest_val'):
+                            with st.spinner("Calculating Logistics Path..."):
+                                # Run Analysis
+                                st.session_state['route_res'] = network_design.analyze_route(
+                                    st.session_state['origin_val'],
+                                    st.session_state['dest_val']
+                                )
+                        else:
+                            st.error("Please select both origin and destination.")
+
+                # 2. RESULTS DETAILING
+                if 'route_res' in st.session_state:
+                    res = st.session_state['route_res']
+
+                    if "error" in res:
+                        st.error(res['error'])
+                    else:
+                        m = res['metrics']
+
+                        st.divider()
+                        st.markdown(f"### 🏆 Strategy: {res['recommendation']}")
+                        st.caption(f"Reasoning: {res['reason']}")
+
+                        # ROAD CARD
+                        if m['road']['possible']:
+                            with st.container(border=True):
+                                st.write("🚛 **ROAD**")
+                                c1, c2 = st.columns(2)
+                                c1.metric("Cost", f"${m['road']['cost']:,.0f}")
+                                c2.metric("Time", f"{m['road']['time']:.1f} Days")
+                                st.progress(min(m['road']['co2'] / 5000, 1.0),
+                                            text=f"Carbon: {int(m['road']['co2'])}kg")
+
+                        # SEA CARD
+                        if m['sea']['possible']:
+                            with st.container(border=True):
+                                st.write("🚢 **SEA**")
+                                c1, c2 = st.columns(2)
+                                c1.metric("Cost", f"${m['sea']['cost']:,.0f}", delta="-Low")
+                                c2.metric("Time", f"{m['sea']['time']:.1f} Days")
+                                st.progress(min(m['sea']['co2'] / 5000, 1.0), text=f"Carbon: {int(m['sea']['co2'])}kg")
+
+                        # AIR CARD
+                        if m['air']['possible']:
+                            with st.container(border=True):
+                                st.write("✈️ **AIR**")
+                                c1, c2 = st.columns(2)
+                                c1.metric("Cost", f"${m['air']['cost']:,.0f}", delta="High", delta_color="inverse")
+                                c2.metric("Time", f"{m['air']['time']:.1f} Days")
+                                st.progress(min(m['air']['co2'] / 5000, 1.0), text=f"Carbon: {int(m['air']['co2'])}kg")
+
+                        if res['recommendation'] == "None":
+                            st.warning("🚫 No valid commercial route found for these parameters.")
+
+            with col_right:
+                st.markdown("#### 📍 Live Transportation Route")
+
+                if 'route_res' in st.session_state and 'error' not in st.session_state['route_res']:
+                    res = st.session_state['route_res']
+                    api_key = os.getenv("GOOGLE_API_KEY")
+
+                    if not api_key:
+                        st.error("⚠️ Google API Key missing in .env file")
+                    else:
+                        o_q = urllib.parse.quote(res['origin']['name'])
+                        d_q = urllib.parse.quote(res['dest']['name'])
+
+                        # MAP EMBED
+                        embed_url = f"https://www.google.com/maps/embed/v1/directions?key={api_key}&origin={o_q}&destination={d_q}&mode=driving"
+
+                        st.components.v1.iframe(embed_url, height=700)
+                else:
+                    st.info("👈 Enter origin and destination to visualize the trade lane.")
 
 st.markdown("---")
 st.caption(f"© 2026 Logistics Research Lab | v4.0.0 | Robustness Analysis Edition")
