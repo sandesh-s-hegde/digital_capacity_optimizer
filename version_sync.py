@@ -1,7 +1,7 @@
 import re
 import os
 
-VERSION = "4.2.0"
+VERSION = "4.2.5"
 FILES_TO_UPDATE = {
     "app.py": r'v\d+\.\d+\.\d+',
     "__init__.py": r'__version__ = "\d+\.\d+\.\d+"',

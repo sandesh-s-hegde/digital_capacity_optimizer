@@ -1,7 +1,7 @@
 # 🚛 LSP Digital Capacity Twin: Multi-Modal Stochastic Engine
 
 **Author:** Sandesh Hegde  
-**Version:** v4.2.0 (Network Designer Edition)
+**Version:** v4.2.5 (Network Designer Edition)
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue?style=for-the-badge&logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-v1.31-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)

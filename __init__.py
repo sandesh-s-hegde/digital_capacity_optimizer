@@ -31,7 +31,7 @@ __all__ = [
     "calculate_landed_cost"
 ]
 
-__version__ = "4.2.0"
+__version__ = "4.2.5"
 __author__ = "Sandesh Hegde"
 __license__ = "MIT"
 __status__ = "Research Artifact"

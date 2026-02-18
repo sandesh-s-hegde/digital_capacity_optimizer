@@ -77,7 +77,7 @@ def seed_database():
         conn.commit()
 
         print(f"✅ Success! {len(raw_data)} records inserted.")
-        print("🚀 v4.2.0 is now populated with Multi-Modal Research Data.")
+        print("🚀 v4.2.5 is now populated with Multi-Modal Research Data.")
 
         cur.close()
         conn.close()

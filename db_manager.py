@@ -36,7 +36,7 @@ def init_db():
     if conn:
         try:
             cur = conn.cursor()
-            # Standardizing table for v4.2.0 Research Artifact
+            # Standardizing table for v4.2.5 Research Artifact
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS inventory (
                     id SERIAL PRIMARY KEY,
