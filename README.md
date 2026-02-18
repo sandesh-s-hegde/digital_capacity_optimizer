@@ -54,7 +54,7 @@ $$\text{Safety Stock} = Z_{\alpha}\sqrt{(\overline{L}\sigma_{D}^{2})+(\overline{
 
 ---
 
-## 🚀 Key Features (v4.2.0)
+## 🚀 Key Features (v4.2.5)
 
 ### 🗺️ 1. Network Designer (New!)
 * **Real-World Routing:** Integrates **Google Maps Platform** to visualize live trade lanes.
@@ -125,7 +125,7 @@ If you use this software in your research, please cite it as follows:
 
 **Harvard Style:**
 
-> Hegde, S.S. (2026). LSP Digital Capacity Twin: Multi-Modal Stochastic Engine (Version 4.2.0) [Software]. Available at: https://github.com/sandesh-s-hegde/digital_capacity_optimizer
+> Hegde, S.S. (2026). LSP Digital Capacity Twin: Multi-Modal Stochastic Engine (Version 4.2.5) [Software]. Available at: https://github.com/sandesh-s-hegde/digital_capacity_optimizer
 
 **BibTeX:**
 
@@ -135,7 +135,7 @@ If you use this software in your research, please cite it as follows:
   month = feb,
   title = {LSP Digital Capacity Twin: Multi-Modal Stochastic Engine},
   url = {(https://github.com/sandesh-s-hegde/digital_capacity_optimizer)},
-  version = {4.2.0},
+  version = {4.2.5},
   year = {2026}
 }
 
