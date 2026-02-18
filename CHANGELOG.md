@@ -2,7 +2,7 @@
 
 All notable changes to the "Financial Digital Twin" research artifact will be documented in this file.
 
-## [5.0.0] - 2026-02-17
+## [4.2.5] - 2026-02-18
 ### Added
 - **Geospatial Network Designer:** Integration with Google Maps Platform for live trade lane visualization and interactive route analysis.
 - **Geopolitical Logic Engine:** Automated filtering for blocked commercial borders (e.g., India-Pakistan) and conflict zones.
