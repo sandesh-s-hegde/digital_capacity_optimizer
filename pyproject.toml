@@ -8,7 +8,7 @@ version = "4.2.5"
 authors = [
   { name="Sandesh Hegde", email="s.sandesh.hegde@gmail.com" },
 ]
-description = "A stochastic digital twin for logistics service providers (LSPs)."
+description = "A stochastic digital twin for logistics service providers (LSPs) featuring multi-modal routing."
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [
@@ -16,6 +16,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering",
+    "Intended Audience :: Science/Research",
 ]
 dependencies = [
     "streamlit",
@@ -23,5 +24,9 @@ dependencies = [
     "numpy",
     "plotly",
     "scipy",
-    "google-generativeai"
+    "google-generativeai",
+    "googlemaps",
+    "geopy",
+    "streamlit-searchbox",
+    "python-dotenv"
 ]
