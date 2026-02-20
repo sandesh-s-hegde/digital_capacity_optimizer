@@ -161,7 +161,7 @@ if source_option == "🔌 Live WMS Database":
             new_demand = st.number_input("Volume", min_value=1, value=100)
             if st.form_submit_button("💾 Save"):
                 if db_manager.add_record(new_date, new_product, new_demand):
-                    st.success("Saved!");
+                    st.success("Saved!")
                     st.rerun()
 
     with st.sidebar.expander("🗑️ Correction"):
@@ -219,9 +219,13 @@ time_mult = 1.0;
 cost_mult = 1.0;
 co2_mult = 1.0
 if "Rail" in transport_mode:
-    time_mult = 1.5; cost_mult = 0.7; co2_mult = 0.3
+    time_mult = 1.5;
+    cost_mult = 0.7;
+    co2_mult = 0.3
 elif "Air" in transport_mode:
-    time_mult = 0.2; cost_mult = 3.0; co2_mult = 5.0
+    time_mult = 0.2;
+    cost_mult = 3.0;
+    co2_mult = 5.0
 
 # Financials
 st.sidebar.subheader("💰 Unit Economics (USD)")
@@ -253,7 +257,7 @@ partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0)
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("🟢 LSP Digital Twin | v4.2.5 | System: Frankfurt | Status: Online")
+st.sidebar.caption("🟢 LSP Digital Twin | v4.2.6 | System: Frankfurt | Status: Online")
 
 # --- ACADEMIC LABELING ---
 st.sidebar.info(
@@ -326,7 +330,7 @@ if df is not None and not df.empty:
     dependency_pct = cooperation_metrics["dependency_ratio"]
 
     combined_volatility_est = (lead_time_months * (std_dev_demand ** 2) + (raw_avg_demand ** 2) * (
-                lead_time_volatility ** 2)) ** 0.5
+        lead_time_volatility ** 2)) ** 0.5
     resilience_score = inventory_math.calculate_resilience_score(sim_safety_stock, combined_volatility_est,
                                                                  dependency_pct)
 
@@ -367,8 +371,9 @@ if df is not None and not df.empty:
     if source_option == "🔌 Live WMS Database" and not selected_sku:
         st.warning("Please select a Service Lane.")
     else:
-        # TAB DEFINITIONS - v3.8.0 (Unified USD)
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Capacity Hub", "💰 Profit Engine", "🔬 Research Lab", "🌏 Global Sourcing", "📍 Network Design"])
+        # TAB DEFINITIONS
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(
+            ["📊 Capacity Hub", "💰 Profit Engine", "🔬 Research Lab", "🌏 Global Sourcing", "📍 Network Design"])
 
         # --- TAB 1: OPERATIONS ---
         with tab1:
@@ -385,14 +390,34 @@ if df is not None and not df.empty:
                 f_df = forecast.generate_forecast(df)
 
             fig = go.Figure()
+            # Historical Demand Line
             fig.add_trace(go.Scatter(x=df['date'], y=df['demand'], mode='lines+markers', name='Outbound Flow',
                                      line=dict(color='#2ca02c', width=3)))
+            # Warehouse Capacity Limit
             fig.add_hline(y=warehouse_cap, line_dash="dot", line_color="red", annotation_text="Limit")
+
+            # Forecast & Confidence Intervals
             if f_df is not None:
+                # Add Upper Confidence Bound (Hidden line, defines top of shaded area)
+                if 'demand_upper' in f_df.columns:
+                    fig.add_trace(go.Scatter(
+                        x=f_df['date'], y=f_df['demand_upper'],
+                        mode='lines', line=dict(width=0), showlegend=False
+                    ))
+                    # Add Lower Confidence Bound (Filled to Upper Bound)
+                    fig.add_trace(go.Scatter(
+                        name='95% Confidence Interval', x=f_df['date'], y=f_df['demand_lower'],
+                        mode='lines', line=dict(width=0), fill='tonexty', fillcolor='rgba(0, 0, 255, 0.1)',
+                        showlegend=True
+                    ))
+
+                # Main Forecast Trend Line
                 last_pt = pd.DataFrame({'date': [df['date'].max()], 'demand': [df.iloc[-1]['demand']]})
                 combined_f = pd.concat([last_pt, f_df])
-                fig.add_trace(go.Scatter(x=combined_f['date'], y=combined_f['demand'], mode='lines', name='Forecast',
-                                         line=dict(dash='dash', color='blue')))
+                fig.add_trace(
+                    go.Scatter(x=combined_f['date'], y=combined_f['demand'], mode='lines', name='Forecast Trend',
+                               line=dict(dash='dash', color='blue')))
+
             st.plotly_chart(fig, use_container_width=True)
 
             c1, c2, c3, c4 = st.columns(4)
@@ -466,7 +491,7 @@ if df is not None and not df.empty:
                 sim_ctx = f"Simulation Run: Optimal SS {int(res['optimal_ss'])}, Margin ${res.get('margin', unit_margin)}, Holding ${holding_cost}"
             render_chat_ui(df, metrics, extra_context=sim_ctx, key="research_chat")
 
-        # --- TAB 4: GLOBAL SOURCING (Unified USD + CBAM + Heatmap v5.3) ---
+        # --- TAB 4: GLOBAL SOURCING ---
         with tab4:
             st.subheader("🌏 Global Sourcing Strategy (China Plus One)")
             st.markdown(
@@ -541,7 +566,7 @@ if df is not None and not df.empty:
                               height=500)
             st.plotly_chart(fig, use_container_width=True)
 
-            # 5. STRATEGIC INSIGHT (FIXED: Escaped Dollar Signs)
+            # 5. STRATEGIC INSIGHT
             labor_arbitrage = eu_price - in_price
             if delta > 0:
                 st.success(
@@ -565,23 +590,18 @@ if df is not None and not df.empty:
 
             if st.button("🔄 Run Sensitivity Heatmap"):
                 with st.spinner("Calculating 400 strategic scenarios..."):
-                    # Generate ranges
-                    freight_range = np.linspace(5.0, max_freight, 20)  # Y-Axis
-                    carbon_range = np.linspace(0, max_carbon, 20)  # X-Axis
+                    freight_range = np.linspace(5.0, max_freight, 20)
+                    carbon_range = np.linspace(0, max_carbon, 20)
 
-                    z_values = []  # Profit Delta (Positive = India Wins, Negative = EU Wins)
+                    z_values = []
 
                     for f in freight_range:
                         row = []
                         for c in carbon_range:
-                            # Re-calculate costs dynamically
-
-                            # 1. EU Cost (Domestic)
                             cost_eu_loop = eu_price + ((eu_co2 / 1000) * c)
                             risk_eu_loop = (eu_lead / 365) * demand * cost_eu_loop * (holding_rate / 100) / demand
                             total_eu_loop = cost_eu_loop + risk_eu_loop
 
-                            # 2. India Cost (Offshore)
                             duty_loop = in_price * (tariff / 100)
                             cbam_loop = (in_co2 / 1000) * c
 
@@ -589,18 +609,16 @@ if df is not None and not df.empty:
                             risk_in_loop = (in_lead / 365) * demand * cost_in_loop * (holding_rate / 100) / demand
                             total_in_loop = cost_in_loop + risk_in_loop
 
-                            # Calculate Advantage (EU - India)
                             advantage = total_eu_loop - total_in_loop
                             row.append(advantage)
                         z_values.append(row)
 
-                    # PLOT HEATMAP
                     fig_heat = go.Figure(data=go.Heatmap(
                         z=z_values,
                         x=carbon_range,
                         y=freight_range,
-                        colorscale='RdBu',  # Red = Negative (Reshore), Blue = Positive (Offshore)
-                        zmid=0,  # The Tipping Point
+                        colorscale='RdBu',
+                        zmid=0,
                         colorbar=dict(title="Savings ($/unit)")
                     ))
 
@@ -632,153 +650,154 @@ if df is not None and not df.empty:
             render_chat_ui(df, metrics, extra_context=fta_context, key="fta_chat")
 
         # --- TAB 5: ROUTE INTELLIGENCE ---
-            with tab5:
-                st.title("🗺️ Logistics Digital Twin: Network Designer")
+        # FIXED INDENTATION - This is now properly aligned with other tabs
+        with tab5:
+            st.title("🗺️ Logistics Digital Twin: Network Designer")
 
-                # Advisory Note
-                st.caption(
-                    "ℹ️ **Note:** This tool is hosted on a free-tier instance. If the map takes a moment to load, please be patient—the code is calculating complex routes live!")
+            # Advisory Note
+            st.caption(
+                "ℹ️ **Note:** This tool is hosted on a free-tier instance. If the map takes a moment to load, please be patient—the code is calculating complex routes live!")
 
-                # --- MAIN LAYOUT (Split Screen) ---
-                col_left, col_right = st.columns([1.2, 2])
+            # --- MAIN LAYOUT (Split Screen) ---
+            col_left, col_right = st.columns([1.2, 2])
 
-                # LEFT COLUMN: Inputs & Metrics
-                with col_left:
-                    st.markdown("#### 🔍 Define Trade Lane")
-                    with st.container(border=True):
-                        # Search Boxes
-                        origin = st_searchbox(
-                            network_design.search_google_places,
-                            key="tab5_origin_search_final",
-                            placeholder="Origin City"
-                        )
-                        dest = st_searchbox(
-                            network_design.search_google_places,
-                            key="tab5_dest_search_final",
-                            placeholder="Destination City"
-                        )
+            # LEFT COLUMN: Inputs & Metrics
+            with col_left:
+                st.markdown("#### 🔍 Define Trade Lane")
+                with st.container(border=True):
+                    # Search Boxes
+                    origin = st_searchbox(
+                        network_design.search_google_places,
+                        key="tab5_origin_search_final",
+                        placeholder="Origin City"
+                    )
+                    dest = st_searchbox(
+                        network_design.search_google_places,
+                        key="tab5_dest_search_final",
+                        placeholder="Destination City"
+                    )
 
-                        # Persist Selection
-                        if origin: st.session_state['origin_val'] = origin
-                        if dest: st.session_state['dest_val'] = dest
+                    # Persist Selection
+                    if origin: st.session_state['origin_val'] = origin
+                    if dest: st.session_state['dest_val'] = dest
 
-                        # Analyze Button
-                        if st.button("🚀 Analyze Route", type="primary", use_container_width=True):
-                            if st.session_state.get('origin_val') and st.session_state.get('dest_val'):
-                                with st.spinner("Calculating Logistics Path..."):
-                                    try:
-                                        st.session_state['route_res'] = network_design.analyze_route(
-                                            st.session_state['origin_val'],
-                                            st.session_state['dest_val']
-                                        )
-                                    except Exception as e:
-                                        st.error(f"Analysis Error: {e}")
-                            else:
-                                st.error("Please select both origin and destination.")
-
-                    # Metric Results (Appears below search boxes)
-                    if 'route_res' in st.session_state:
-                        res = st.session_state['route_res']
-                        if "error" in res:
-                            st.error(res['error'])
-                        else:
-                            m = res['metrics']
-                            st.divider()
-                            st.markdown(f"### 🏆 Strategy: {res['recommendation']}")
-                            st.caption(f"Reasoning: {res['reason']}")
-
-                            # ROAD CARD
-                            if m['road']['possible']:
-                                with st.container(border=True):
-                                    st.write("🚛 **ROAD**")
-                                    c1, c2 = st.columns(2)
-                                    c1.metric("Cost", f"${m['road']['cost']:,.0f}")
-                                    c2.metric("Time", f"{m['road']['time']:.1f} Days")
-                                    st.progress(min(m['road']['co2'] / 5000, 1.0),
-                                                text=f"Carbon: {int(m['road']['co2'])}kg")
-
-                            # SEA CARD
-                            if m['sea']['possible']:
-                                with st.container(border=True):
-                                    st.write("🚢 **SEA**")
-                                    c1, c2 = st.columns(2)
-                                    c1.metric("Cost", f"${m['sea']['cost']:,.0f}", delta="-Low")
-                                    c2.metric("Time", f"{m['sea']['time']:.1f} Days")
-                                    st.progress(min(m['sea']['co2'] / 5000, 1.0),
-                                                text=f"Carbon: {int(m['sea']['co2'])}kg")
-
-                            # AIR CARD
-                            if m['air']['possible']:
-                                with st.container(border=True):
-                                    st.write("✈️ **AIR**")
-                                    c1, c2 = st.columns(2)
-                                    c1.metric("Cost", f"${m['air']['cost']:,.0f}", delta="High", delta_color="inverse")
-                                    c2.metric("Time", f"{m['air']['time']:.1f} Days")
-                                    st.progress(min(m['air']['co2'] / 5000, 1.0),
-                                                text=f"Carbon: {int(m['air']['co2'])}kg")
-
-                            if res['recommendation'] == "None":
-                                st.warning("🚫 No valid commercial route found.")
-
-                # RIGHT COLUMN: Map
-                with col_right:
-                    st.markdown("#### 📍 Live Transportation Route")
-
-                    if 'route_res' in st.session_state and 'error' not in st.session_state['route_res']:
-                        res = st.session_state['route_res']
-                        api_key = os.getenv("GOOGLE_API_KEY")
-
-                        if not api_key:
-                            st.error("⚠️ Google API Key missing.")
-                        else:
-                            o_q = urllib.parse.quote(res['origin']['name'])
-                            d_q = urllib.parse.quote(res['dest']['name'])
-                            embed_url = f"https://www.google.com/maps/embed/v1/directions?key={api_key}&origin={o_q}&destination={d_q}&mode=driving"
-                            st.components.v1.iframe(embed_url, height=700)
-                    else:
-                        st.info("👈 Enter origin and destination to visualize the trade lane.")
-
-                # --- AI COMPANION SECTION (Full Width, Bottom of Page) ---
-                st.divider()
-                st.subheader("💬 LSP Strategy Assistant")
-                st.caption(
-                    "Ask questions about this specific route (e.g., 'Why is the sea route 18 days?', 'What are the border risks?').")
-
-                # Initialize chat history
-                if "logistics_chat_history" not in st.session_state:
-                    st.session_state.logistics_chat_history = []
-
-                # Display chat messages
-                for role, text in st.session_state.logistics_chat_history:
-                    with st.chat_message(role):
-                        st.markdown(text)
-
-                # Chat Input
-                if prompt := st.chat_input("Ask about this trade lane..."):
-                    # 1. User Message
-                    st.session_state.logistics_chat_history.append(("user", prompt))
-                    with st.chat_message("user"):
-                        st.markdown(prompt)
-
-                    # 2. AI Response
-                    if 'route_res' in st.session_state:
-                        with st.chat_message("assistant"):
-                            with st.spinner("Analyzing logistics data..."):
-                                # Call the AI function from network_design.py
+                    # Analyze Button
+                    if st.button("🚀 Analyze Route", type="primary", use_container_width=True):
+                        if st.session_state.get('origin_val') and st.session_state.get('dest_val'):
+                            with st.spinner("Calculating Logistics Path..."):
                                 try:
-                                    response = network_design.ask_gemini_logistics(prompt,
-                                                                                   st.session_state['route_res'])
-                                    st.markdown(response)
-                                    st.session_state.logistics_chat_history.append(("assistant", response))
+                                    st.session_state['route_res'] = network_design.analyze_route(
+                                        st.session_state['origin_val'],
+                                        st.session_state['dest_val']
+                                    )
                                 except Exception as e:
-                                    st.error(f"AI Error: {e}")
+                                    st.error(f"Analysis Error: {e}")
+                        else:
+                            st.error("Please select both origin and destination.")
+
+                # Metric Results (Appears below search boxes)
+                if 'route_res' in st.session_state:
+                    res = st.session_state['route_res']
+                    if "error" in res:
+                        st.error(res['error'])
                     else:
-                        # Fallback if no route is analyzed yet
-                        with st.chat_message("assistant"):
-                            st.warning("Please analyze a route first so I have data to discuss!")
+                        m = res['metrics']
+                        st.divider()
+                        st.markdown(f"### 🏆 Strategy: {res['recommendation']}")
+                        st.caption(f"Reasoning: {res['reason']}")
+
+                        # ROAD CARD
+                        if m['road']['possible']:
+                            with st.container(border=True):
+                                st.write("🚛 **ROAD**")
+                                c1, c2 = st.columns(2)
+                                c1.metric("Cost", f"${m['road']['cost']:,.0f}")
+                                c2.metric("Time", f"{m['road']['time']:.1f} Days")
+                                st.progress(min(m['road']['co2'] / 5000, 1.0),
+                                            text=f"Carbon: {int(m['road']['co2'])}kg")
+
+                        # SEA CARD
+                        if m['sea']['possible']:
+                            with st.container(border=True):
+                                st.write("🚢 **SEA**")
+                                c1, c2 = st.columns(2)
+                                c1.metric("Cost", f"${m['sea']['cost']:,.0f}", delta="-Low")
+                                c2.metric("Time", f"{m['sea']['time']:.1f} Days")
+                                st.progress(min(m['sea']['co2'] / 5000, 1.0),
+                                            text=f"Carbon: {int(m['sea']['co2'])}kg")
+
+                        # AIR CARD
+                        if m['air']['possible']:
+                            with st.container(border=True):
+                                st.write("✈️ **AIR**")
+                                c1, c2 = st.columns(2)
+                                c1.metric("Cost", f"${m['air']['cost']:,.0f}", delta="High", delta_color="inverse")
+                                c2.metric("Time", f"{m['air']['time']:.1f} Days")
+                                st.progress(min(m['air']['co2'] / 5000, 1.0),
+                                            text=f"Carbon: {int(m['air']['co2'])}kg")
+
+                        if res['recommendation'] == "None":
+                            st.warning("🚫 No valid commercial route found.")
+
+            # RIGHT COLUMN: Map
+            with col_right:
+                st.markdown("#### 📍 Live Transportation Route")
+
+                if 'route_res' in st.session_state and 'error' not in st.session_state['route_res']:
+                    res = st.session_state['route_res']
+                    api_key = os.getenv("GOOGLE_API_KEY")
+
+                    if not api_key:
+                        st.error("⚠️ Google API Key missing.")
+                    else:
+                        o_q = urllib.parse.quote(res['origin']['name'])
+                        d_q = urllib.parse.quote(res['dest']['name'])
+                        embed_url = f"https://www.google.com/maps/embed/v1/directions?key={api_key}&origin={o_q}&destination={d_q}&mode=driving"
+                        st.components.v1.iframe(embed_url, height=700)
+                else:
+                    st.info("👈 Enter origin and destination to visualize the trade lane.")
+
+            # --- AI COMPANION SECTION (Full Width, Bottom of Page) ---
+            st.divider()
+            st.subheader("💬 LSP Strategy Assistant")
+            st.caption(
+                "Ask questions about this specific route (e.g., 'Why is the sea route 18 days?', 'What are the border risks?').")
+
+            # Initialize chat history
+            if "logistics_chat_history" not in st.session_state:
+                st.session_state.logistics_chat_history = []
+
+            # Display chat messages
+            for role, text in st.session_state.logistics_chat_history:
+                with st.chat_message(role):
+                    st.markdown(text)
+
+            # Chat Input
+            if prompt := st.chat_input("Ask about this trade lane..."):
+                # 1. User Message
+                st.session_state.logistics_chat_history.append(("user", prompt))
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+
+                # 2. AI Response
+                if 'route_res' in st.session_state:
+                    with st.chat_message("assistant"):
+                        with st.spinner("Analyzing logistics data..."):
+                            # Call the AI function from network_design.py
+                            try:
+                                response = network_design.ask_gemini_logistics(prompt,
+                                                                               st.session_state['route_res'])
+                                st.markdown(response)
+                                st.session_state.logistics_chat_history.append(("assistant", response))
+                            except Exception as e:
+                                st.error(f"AI Error: {e}")
+                else:
+                    # Fallback if no route is analyzed yet
+                    with st.chat_message("assistant"):
+                        st.warning("Please analyze a route first so I have data to discuss!")
 
 st.markdown("---")
-st.caption(f"© 2026 Logistics Research Lab | v4.2.5 | Network Designer Edition")
+st.caption(f"© 2026 Logistics Research Lab | v4.2.6 | Network Designer Edition")
 
 if source_option == "🔌 Live WMS Database" and df is not None:
     with st.expander("🔍 Inspect Warehouse Logs"):
