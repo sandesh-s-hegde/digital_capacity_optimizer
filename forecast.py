@@ -1,48 +1,45 @@
 import pandas as pd
 import numpy as np
-from datetime import timedelta
-from dateutil.relativedelta import relativedelta
 
-
-def generate_forecast(df, months=3):
+def generate_forecast(df: pd.DataFrame, months: int = 3) -> pd.DataFrame:
     """
     Takes the historical dataframe and projects 'months' into the future
-    using a simple linear trend line (numpy polyfit).
+    using linear trend projection, integrating standard error for 95% confidence intervals.
     """
-    if len(df) < 2:
-        return None  # Not enough data to predict
+    if len(df) < 3:
+        return None  # Need at least 3 data points to calculate meaningful variance
 
-    # 1. Prepare Data for Math (Convert Dates to Ordinal Numbers)
-    df = df.sort_values('date')
-    df['date_ordinal'] = df['date'].map(pd.Timestamp.toordinal)
+    # 1. Prepare Data (Use copy to avoid SettingWithCopyWarning)
+    df_clean = df.copy().sort_values('date')
+    df_clean['date_ordinal'] = df_clean['date'].map(pd.Timestamp.toordinal)
 
     # 2. Calculate Trend Line (Linear Regression)
-    # This finds the "slope" of your demand growth/shrinkage
-    z = np.polyfit(df['date_ordinal'], df['demand'], 1)
-    p = np.poly1d(z)
+    x = df_clean['date_ordinal'].values
+    y = df_clean['demand'].values
+    slope, intercept = np.polyfit(x, y, 1)
+    trend_line = np.poly1d([slope, intercept])
 
-    # 3. Generate Future Dates
-    last_date = df['date'].max()
-    future_dates = []
+    # 3. Calculate Historical Error for Confidence Bounds
+    # Root Mean Square Error (RMSE) to determine expected forecast drift
+    historical_predictions = trend_line(x)
+    residuals = y - historical_predictions
+    std_error = np.std(residuals)
 
-    # We predict 1 point per month for the next N months
-    current_date = last_date
-    for _ in range(months):
-        current_date = current_date + relativedelta(months=1)
-        future_dates.append(current_date)
+    # 4. Generate Future Dates (Pandas Vectorized Approach)
+    last_date = df_clean['date'].max()
+    future_dates = [last_date + pd.DateOffset(months=i) for i in range(1, months + 1)]
 
-    # 4. Predict Values for those Future Dates
-    future_ordinals = [d.toordinal() for d in future_dates]
-    predicted_demand = p(future_ordinals)
+    # 5. Predict Values for Future Dates
+    future_ordinals = np.array([d.toordinal() for d in future_dates])
+    predicted_demand = trend_line(future_ordinals)
 
-    # 5. Create DataFrame for the Forecast
+    # 6. Build DataFrame with 95% Confidence Intervals (Z = 1.96)
     forecast_df = pd.DataFrame({
         'date': future_dates,
-        'demand': predicted_demand,
+        'demand': np.maximum(0, predicted_demand),  # Vectorized floor clamp
+        'demand_upper': np.maximum(0, predicted_demand + (1.96 * std_error)),
+        'demand_lower': np.maximum(0, predicted_demand - (1.96 * std_error)),
         'type': 'Forecast'
     })
-
-    # Ensure no negative demand (impossible)
-    forecast_df['demand'] = forecast_df['demand'].apply(lambda x: max(0, x))
 
     return forecast_df
