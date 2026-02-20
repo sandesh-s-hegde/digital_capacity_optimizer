@@ -1,120 +1,108 @@
-import plotly.graph_objects as go
-import numpy as np
-import pandas as pd
 import scipy.stats as stats
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+import plotly.express as px
 
 
-def calculate_profit_scenarios(avg_demand, std_dev, holding_cost, stockout_cost, unit_cost, selling_price):
+def calculate_profit_scenarios(avg_demand: float, std_dev: float, holding_cost: float,
+                               stockout_cost: float, unit_cost: float, selling_price: float):
     """
-    Generates the Profit Heatmap (Existing Logic).
+    Generates the Profit Heatmap using ultra-fast NumPy vectorization (meshgrid).
     """
-    # Define ranges
+    margin = selling_price - unit_cost
+
+    # 1. Define Arrays (Vectorized)
     service_levels = np.linspace(0.50, 0.99, 20)
     lead_time_vars = np.linspace(0.0, 2.0, 20)
 
     z_scores = stats.norm.ppf(service_levels)
 
-    profit_matrix = []
+    # 2. Create 2D Grids for Matrix Math
+    Z_grid, LT_grid = np.meshgrid(z_scores, lead_time_vars)
 
-    margin = selling_price - unit_cost
+    # 3. Vectorized Financial Math (No 'for' loops)
+    # RSS Safety Stock Formula: SS = Z * sqrt((1 * var_D) + (D^2 * var_LT))
+    SS_grid = Z_grid * np.sqrt((1 * std_dev ** 2) + (avg_demand ** 2 * LT_grid ** 2))
+    HC_grid = SS_grid * holding_cost
 
-    for lt_var in lead_time_vars:
-        row = []
-        for z in z_scores:
-            # RSS Safety Stock Formula
-            # Assuming Avg Lead Time = 1 for this heatmap abstraction
-            safety_stock = z * np.sqrt((1 * std_dev ** 2) + (avg_demand ** 2 * lt_var ** 2))
+    # Standard Normal Loss Function: L(z) = pdf(z) - z * (1 - cdf(z))
+    loss_grid = stats.norm.pdf(Z_grid) - Z_grid * (1 - stats.norm.cdf(Z_grid))
+    ES_grid = std_dev * loss_grid  # Expected Shortage
 
-            # Costs
-            holding_cost_total = safety_stock * holding_cost
+    # Costs
+    penalty_grid = ES_grid * (stockout_cost + margin)  # Penalty + Opportunity Cost
+    gross_profit = avg_demand * margin
 
-            # Expected Lost Sales (Standard Loss Function)
-            # L(z) = pdf(z) - z * (1 - cdf(z))
-            loss_func = stats.norm.pdf(z) - z * (1 - stats.norm.cdf(z))
-            expected_shortage = std_dev * loss_func
-            stockout_cost_total = expected_shortage * stockout_cost  # Penalty
-            opportunity_cost = expected_shortage * margin  # Lost Profit
+    # Net Profit Matrix
+    profit_matrix = gross_profit - (HC_grid + penalty_grid)
 
-            # Total Profit = (Demand * Margin) - (Holding + Stockout + Opportunity)
-            gross_profit = avg_demand * margin
-            net_profit = gross_profit - (holding_cost_total + stockout_cost_total + opportunity_cost)
-
-            row.append(net_profit)
-        profit_matrix.append(row)
-
+    # 4. Build Visualization
     fig = go.Figure(data=go.Heatmap(
         z=profit_matrix,
         x=[f"{sl:.0%}" for sl in service_levels],
         y=[f"{lt:.1f}" for lt in lead_time_vars],
         colorscale='Viridis',
-        hoverongaps=False
+        hoverongaps=False,
+        hovertemplate="Service Level: %{x}<br>Volatility: %{y}<br>Profit: $%{z:,.0f}<extra></extra>"
     ))
 
     fig.update_layout(
         title="Net Profit Landscape ($)",
         xaxis_title="Target Service Level (%)",
-        yaxis_title="Supply Chain Volatility (σ_LT)",
-        height=400
+        yaxis_title="Supply Chain Volatility (\sigma_{LT})",
+        height=400,
+        margin={"r": 0, "t": 40, "l": 0, "b": 0}
     )
 
     return fig
 
 
-def plot_cost_tradeoff(avg_demand, std_dev, holding_cost, stockout_cost, unit_cost, selling_price):
+def plot_cost_tradeoff(avg_demand: float, std_dev: float, holding_cost: float,
+                       stockout_cost: float, unit_cost: float, selling_price: float):
     """
-    NEW FEATURE: Visualizes the 'Convexity' of Supply Chain Costs.
-    Plots Holding Cost vs. Stockout Cost to find the mathematical minimum.
+    Visualizes the Convexity of Supply Chain Costs.
+    Vectorized for high-resolution plotting (100 data points).
     """
-    service_levels = np.linspace(0.50, 0.99, 50)
-    z_scores = stats.norm.ppf(service_levels)
-
-    holding_costs = []
-    stockout_costs = []
-    total_costs = []
-
     margin = selling_price - unit_cost
 
-    for z in z_scores:
-        # Simplified Safety Stock for this view (Focus on Service Level impact)
-        safety_stock = z * std_dev
+    # 1. High-Resolution Arrays (100 points for a smooth curve)
+    service_levels = np.linspace(0.50, 0.99, 100)
+    z_scores = stats.norm.ppf(service_levels)
 
-        # 1. Holding Cost (Linear Increase with Z)
-        h_cost = safety_stock * holding_cost
+    # 2. Vectorized Math Operations
+    safety_stock = z_scores * std_dev
+    holding_costs = safety_stock * holding_cost
 
-        # 2. Stockout Cost (Exponential Decay with Z)
-        loss_func = stats.norm.pdf(z) - z * (1 - stats.norm.cdf(z))
-        expected_shortage = std_dev * loss_func
+    loss_func = stats.norm.pdf(z_scores) - z_scores * (1 - stats.norm.cdf(z_scores))
+    expected_shortage = std_dev * loss_func
+    stockout_costs = expected_shortage * (stockout_cost + margin)
 
-        # Total Shortage Impact = Penalty + Lost Margin
-        s_cost = expected_shortage * (stockout_cost + margin)
+    total_costs = holding_costs + stockout_costs
 
-        holding_costs.append(h_cost)
-        stockout_costs.append(s_cost)
-        total_costs.append(h_cost + s_cost)
-
-    # Find Optimal Point (Minimum Total Cost)
-    min_cost = min(total_costs)
-    min_idx = total_costs.index(min_cost)
+    # 3. Find Optimal Point mathematically
+    min_idx = np.argmin(total_costs)
+    min_cost = total_costs[min_idx]
     optimal_sla = service_levels[min_idx]
 
-    # Build the Chart
+    # 4. Build the Chart
     fig = go.Figure()
 
-    # Trace 1: Holding Cost (The Risk of Too Much)
-    fig.add_trace(go.Scatter(x=service_levels, y=holding_costs, mode='lines', name='Holding Cost',
-                             line=dict(color='red', dash='dot')))
+    # Trace 1: Holding Cost
+    fig.add_trace(go.Scatter(x=service_levels, y=holding_costs, mode='lines',
+                             name='Holding Cost', line=dict(color='red', dash='dot')))
 
-    # Trace 2: Stockout Cost (The Risk of Too Little)
-    fig.add_trace(go.Scatter(x=service_levels, y=stockout_costs, mode='lines', name='Stockout Cost',
-                             line=dict(color='orange', dash='dot')))
+    # Trace 2: Stockout Cost
+    fig.add_trace(go.Scatter(x=service_levels, y=stockout_costs, mode='lines',
+                             name='Stockout Cost', line=dict(color='orange', dash='dot')))
 
-    # Trace 3: Total Cost (The Optimization Curve)
-    fig.add_trace(go.Scatter(x=service_levels, y=total_costs, mode='lines', name='Total Cost Impact',
-                             line=dict(color='green', width=4)))
+    # Trace 3: Total Cost
+    fig.add_trace(go.Scatter(x=service_levels, y=total_costs, mode='lines',
+                             name='Total Cost Impact', line=dict(color='green', width=4)))
 
     # Highlight Optimal Point
-    fig.add_trace(go.Scatter(x=[optimal_sla], y=[min_cost], mode='markers', name='Optimal Point',
-                             marker=dict(color='black', size=12, symbol='star')))
+    fig.add_trace(go.Scatter(x=[optimal_sla], y=[min_cost], mode='markers',
+                             name='Optimal Point', marker=dict(color='black', size=12, symbol='star')))
 
     fig.update_layout(
         title=f"The Optimization Curve (Optimal SLA: {optimal_sla:.1%})",
@@ -122,7 +110,8 @@ def plot_cost_tradeoff(avg_demand, std_dev, holding_cost, stockout_cost, unit_co
         yaxis_title="Financial Impact ($)",
         xaxis=dict(tickformat=".0%"),
         height=400,
-        hovermode="x unified"
+        hovermode="x unified",
+        margin={"r": 0, "t": 40, "l": 0, "b": 0}
     )
 
     return fig
