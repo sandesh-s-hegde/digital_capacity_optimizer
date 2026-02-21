@@ -757,6 +757,7 @@ if df is not None and not df.empty:
                 else:
                     st.info("👈 Enter origin and destination to visualize the trade lane.")
 
+            # 🛑 CRITICAL ALIGNMENT: Un-indent this so it is OUTSIDE 'with col_right:'
             # --- AI COMPANION SECTION (Full Width, Bottom of Page) ---
             st.divider()
             st.subheader("💬 LSP Strategy Assistant")
@@ -767,34 +768,42 @@ if df is not None and not df.empty:
             if "logistics_chat_history" not in st.session_state:
                 st.session_state.logistics_chat_history = []
 
-            # Display chat messages
-            for role, text in st.session_state.logistics_chat_history:
-                with st.chat_message(role):
-                    st.markdown(text)
+            # Create the exact same bordered container used in Tabs 1-4
+            chat_container = st.container(height=400, border=True)
+
+            # Display chat messages inside the container
+            with chat_container:
+                for role, text in st.session_state.logistics_chat_history:
+                    st.chat_message(role).markdown(text)
 
             # Chat Input
-            if prompt := st.chat_input("Ask about this trade lane..."):
-                # 1. User Message
-                st.session_state.logistics_chat_history.append(("user", prompt))
-                with st.chat_message("user"):
-                    st.markdown(prompt)
+            if prompt := st.chat_input("Ask about this trade lane...", key="network_chat"):
 
-                # 2. AI Response
-                if 'route_res' in st.session_state:
-                    with st.chat_message("assistant"):
-                        with st.spinner("Analyzing logistics data..."):
-                            # Call the AI function from network_design.py
-                            try:
-                                response = network_design.ask_gemini_logistics(prompt,
-                                                                               st.session_state['route_res'])
-                                st.markdown(response)
-                                st.session_state.logistics_chat_history.append(("assistant", response))
-                            except Exception as e:
-                                st.error(f"AI Error: {e}")
-                else:
-                    # Fallback if no route is analyzed yet
-                    with st.chat_message("assistant"):
-                        st.warning("Please analyze a route first so I have data to discuss!")
+                # Append user message
+                st.session_state.logistics_chat_history.append(("user", prompt))
+
+                with chat_container:
+                    st.chat_message("user").markdown(prompt)
+
+                    # Generate & Append AI Response
+                    if 'route_res' in st.session_state:
+                        with st.chat_message("assistant"):
+                            with st.spinner("Analyzing logistics data..."):
+                                try:
+                                    response = network_design.ask_gemini_logistics(prompt, st.session_state[
+                                        'route_res'])
+                                    st.markdown(response)
+                                    st.session_state.logistics_chat_history.append(("assistant", response))
+                                except Exception as e:
+                                    st.error(f"AI Error: {e}")
+                    else:
+                        with st.chat_message("assistant"):
+                            warning_msg = "Please analyze a route first so I have data to discuss!"
+                            st.warning(warning_msg)
+                            st.session_state.logistics_chat_history.append(("assistant", warning_msg))
+
+                # Rerun to refresh the container instantly
+                st.rerun()
 
 st.markdown("---")
 st.caption(f"© 2026 Logistics Research Lab | v4.2.6 | Network Designer Edition")
