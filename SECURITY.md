@@ -2,21 +2,27 @@
 
 ## Supported Versions
 
-As this is a research artifact submitted for academic assessment, active security maintenance is prioritized for the current major release version only.
+As this Decision Support System (DSS) is both an active research artifact and a production-grade proof-of-concept, security maintenance and patches are prioritized for the current major release tree.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 2.x     | :white_check_mark: |
-| 1.x     | :x:                |
+| 4.2.x   | :white_check_mark: |
+| 4.0.x   | :warning: (Critical patches only) |
+| < 4.0   | :x:                |
 
 ## Reporting a Vulnerability
 
-This project utilizes `dotenv` for environment variable management to secure credentials (API Keys, Database URLs).
+This project utilizes strict environment variable management (`dotenv`) to secure all credentials, cloud databases, and API keys.
 
-If you discover a security vulnerability (e.g., exposed endpoints, SQL injection risk), please do **not** open a public issue.
+If you discover a security vulnerability (e.g., SQL injection risks, exposed endpoints, or AI prompt injection vulnerabilities), please do **not** open a public GitHub issue.
 
-Instead, please report it via email to the repository owner. As this is a proof-of-concept digital twin, patches will be applied on a best-effort basis consistent with the research timeline.
+Instead, please report it via email directly to the repository owner at **s.sandesh.hegde@gmail.com**. We will acknowledge receipt of the vulnerability within 48 hours and strive to issue a patch within 5 business days.
 
-### Critical Considerations for Reviewers
-* **API Keys:** The `GOOGLE_API_KEY` is not committed to the repository and must be injected via the environment.
-* **Database:** The PostgreSQL instance uses SSL-required connections (`sslmode=require`) in production.
+## Architecture Security Considerations
+
+When deploying or reviewing this artifact, please note the following security implementations:
+
+* **Decoupled Authentication:** The system uses distinct, strictly-scoped API keys for geospatial mapping (`GOOGLE_API_KEY`) and AI reasoning (`GEMINI_API_KEY`) to prevent cross-service privilege escalation and billing attacks.
+* **Zero-Trust Secrets:** No keys or database credentials are ever committed to this repository. Users must supply their own keys via a local `.env` file or a cloud secrets manager (e.g., Streamlit Secrets / Render Environment Variables).
+* **Database Encryption:** The PostgreSQL network twin enforces `sslmode=require` for all cloud connections, ensuring logistics and inventory data remain encrypted in transit.
+* **Input Sanitization:** User inputs passed through the Streamlit UI and location search boxes are sanitized prior to backend execution to prevent malicious database queries.
