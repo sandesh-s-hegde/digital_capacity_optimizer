@@ -21,6 +21,7 @@ import monte_carlo
 import network_design
 import urllib.parse
 import os
+import climate_finance
 
 # --- LOAD SECRETS ---
 load_dotenv()
@@ -648,6 +649,48 @@ if df is not None and not df.empty:
                 - Verdict: {winner} is the optimal choice by ${abs(delta):.2f}.
                 """
             render_chat_ui(df, metrics, extra_context=fta_context, key="fta_chat")
+
+            # --- 8. FINTECH CLIMATE RISK MODULE (NEW) ---
+            st.divider()
+            st.subheader("📈 FinTech Climate Risk Engine")
+            st.markdown(
+                "Simulate regulatory transition risk using Geometric Brownian Motion (GBM) on the EU ETS carbon market.")
+
+            with st.expander("🛠️ Configure Financial Markets", expanded=False):
+                fin1, fin2, fin3 = st.columns(3)
+                with fin1:
+                    current_ets = st.number_input("Current ETS Price ($)", value=85.0)
+                with fin2:
+                    ets_volatility = st.slider("Market Volatility (σ)", 0.10, 1.00, 0.40)
+                with fin3:
+                    total_emissions = green_metrics["total_emissions"] if "total_emissions" in green_metrics else 50000
+                    st.metric("Total Supply Chain Emissions", f"{int(total_emissions):,} kg")
+
+            if st.button("🔄 Run Stochastic Carbon Simulation"):
+                with st.spinner("Generating 2,000 market paths via Geometric Brownian Motion..."):
+                    # Convert kg to metric tonnes for the financial model
+                    emissions_tonnes = total_emissions / 1000.0
+
+                    cf_fig, cf_metrics = climate_finance.plot_carbon_risk_simulation(
+                        current_price=current_ets,
+                        volatility=ets_volatility,
+                        total_emissions_tons=emissions_tonnes
+                    )
+
+                    # Display the FinTech Chart
+                    st.plotly_chart(cf_fig, use_container_width=True)
+
+                    # Display the Financial Exposure Metrics
+                    cf1, cf2, cf3 = st.columns(3)
+                    cf1.metric("Current Carbon Liability", f"${cf_metrics['current_exposure']:,.0f}")
+
+                    delta_expected = cf_metrics['expected_exposure'] - cf_metrics['current_exposure']
+                    cf2.metric("Expected Liability (1Y)", f"${cf_metrics['expected_exposure']:,.0f}",
+                               f"{delta_expected:,.0f} Drift", delta_color="inverse")
+
+                    delta_worst = cf_metrics['worst_case_exposure'] - cf_metrics['current_exposure']
+                    cf3.metric("Carbon Value at Risk (95%)", f"${cf_metrics['worst_case_exposure']:,.0f}",
+                               f"{delta_worst:,.0f} Max Downside", delta_color="inverse")
 
         # --- TAB 5: ROUTE INTELLIGENCE ---
         # FIXED INDENTATION - This is now properly aligned with other tabs
