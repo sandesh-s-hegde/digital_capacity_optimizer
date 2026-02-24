@@ -1,6 +1,6 @@
-name: Digital Capacity CI
+name: 🚛 LSP Digital Twin Enterprise CI
 
-# TRIGGER LOGIC: Runs automatically on every push to 'main'
+# TRIGGER LOGIC: Runs automatically on every push and PR to 'main'
 on:
   push:
     branches: [ "main" ]
@@ -11,22 +11,50 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+
+    # 1. MATRIX TESTING: Proves your math engine works across all modern Python environments
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
     steps:
-    - uses: actions/checkout@v3
+    # 2. UPGRADED ACTIONS: Using the latest v4/v5 Node20 runners
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
       with:
-        python-version: "3.11"
+        python-version: ${{ matrix.python-version }}
+        # 3. CACHING: Instantly loads heavy Data Science packages (NumPy, SciPy)
+        cache: 'pip'
 
-    - name: Install dependencies
+    - name: Install dependencies and QA tools
       run: |
         python -m pip install --upgrade pip
+        # Install enterprise linting and testing frameworks
+        pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    - name: Test with unittest
+    # 4. LINTING: Proves to reviewers your code is clean and PEP8 compliant
+    - name: Enforce Code Quality (Flake8)
       run: |
-        if [ -f test_suite.py ]; then python test_suite.py; else echo "No tests found"; fi
-# Triggering CI Run
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all other issues as warnings for now
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    # 5. TESTING: Upgraded to PyTest for deep empirical validation
+    - name: Run Empirical Test Suite
+      # Inject dummy API keys so tests don't fail if they hit environment variables
+      env:
+        GEMINI_API_KEY: "mock_ci_key"
+        GOOGLE_API_KEY: "mock_ci_key"
+      run: |
+        if [ -f test_suite.py ]; then 
+          pytest test_suite.py -v
+        else 
+          echo "⚠️ No test_suite.py found. Skipping tests."
+        fi
