@@ -1,48 +1,30 @@
 """
 LSP Digital Capacity Twin
-=========================
-
-A stochastic digital twin for logistics service providers (LSPs) to optimize
-capacity, inventory, and risk management.
-
-This package operationalizes the "Pixels to Premiums" research framework.
+Version: 4.2.6
 """
 
-# Operational Core
+__version__ = "4.2.6"
+
+# 1. Core Operations & Math
 from .inventory_math import (
-    calculate_eoq,
-    calculate_safety_stock,
-    calculate_service_level,
     calculate_newsvendor_target,
-    calculate_required_inventory
+    calculate_advanced_safety_stock,
+    calculate_horizontal_sharing,
+    calculate_resilience_score,
+    calculate_service_implications,
+    calculate_loyalty_index,
+    calculate_sustainability_impact
 )
 
-# Strategic Research Engines (New in v5.0)
-from .monte_carlo import run_simulation
-from .fta_macro import calculate_landed_cost
+# 2. FinTech & Risk
+from .climate_finance import (
+    simulate_ets_carbon_pricing,
+    plot_carbon_risk_simulation
+)
 
-__all__ = [
-    "calculate_eoq",
-    "calculate_safety_stock",
-    "calculate_service_level",
-    "calculate_newsvendor_target",
-    "calculate_required_inventory",
-    "run_simulation",
-    "calculate_landed_cost"
-]
+# 3. Strategy & Forecasting
+from .profit_optimizer import calculate_profit_scenarios, plot_cost_tradeoff
+from .forecast import generate_forecast
 
-__version__ = "4.2.5"
-__author__ = "Sandesh Hegde"
-__license__ = "MIT"
-__status__ = "Research Artifact"
-__email__ = "s.sandesh.hegde@gmail.com"
-
-def get_info():
-    """Returns the research context for this artifact."""
-    return {
-        "Project": "LSP Digital Capacity Twin",
-        "Framework": "Pixels to Premiums",
-        "Version": __version__,
-        "Author": __author__,
-        "Status": __status__
-    }
+# 4. Geospatial
+from .map_viz import render_map
