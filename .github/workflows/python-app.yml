@@ -1,4 +1,4 @@
-name: 🚛 LSP Digital Twin Enterprise CI
+name: 🔬 Quantitative Validation Pipeline
 
 # TRIGGER LOGIC: Runs automatically on every push and PR to 'main'
 on:
