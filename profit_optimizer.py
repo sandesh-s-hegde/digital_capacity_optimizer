@@ -50,7 +50,7 @@ def calculate_profit_scenarios(avg_demand: float, std_dev: float, holding_cost: 
     fig.update_layout(
         title="Net Profit Landscape ($)",
         xaxis_title="Target Service Level (%)",
-        yaxis_title="Supply Chain Volatility (\sigma_{LT})",
+        yaxis_title=r"Supply Chain Volatility (\sigma_{LT})",
         height=400,
         margin={"r": 0, "t": 40, "l": 0, "b": 0}
     )
