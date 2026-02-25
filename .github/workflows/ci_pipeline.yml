@@ -1,6 +1,5 @@
 name: 🧪 Empirical Math & Test Matrix
 
-# TRIGGER LOGIC: Runs automatically on every push and PR to 'main'
 on:
   push:
     branches: [ "main" ]
@@ -14,41 +13,34 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    # 1. MATRIX TESTING: Proves your math engine works across all modern Python environments
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-    # 2. UPGRADED ACTIONS: Using the latest v4/v5 Node20 runners
-    - name: Checkout Repository
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        # 3. CACHING: Instantly loads heavy Data Science packages (NumPy, SciPy)
         cache: 'pip'
 
-    - name: Install dependencies and QA tools
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # Install enterprise linting and testing frameworks
         pip install flake8 pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-    # 4. LINTING: Proves to reviewers your code is clean and PEP8 compliant
-    - name: Enforce Code Quality (Flake8)
+    - name: Lint with flake8
       run: |
-        # Stop the build if there are Python syntax errors or undefined names
+        # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all other issues as warnings for now
+        # exit-zero treats all errors as warnings
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    # 5. TESTING: Upgraded to PyTest for deep empirical validation
-    - name: Run Empirical Test Suite
-      # Inject dummy API keys so tests don't fail if they hit environment variables
+    - name: Run test suite
       env:
         GEMINI_API_KEY: "mock_ci_key"
         GOOGLE_API_KEY: "mock_ci_key"
@@ -57,5 +49,5 @@ jobs:
         if [ -f test_suite.py ]; then 
           pytest test_suite.py -v
         else 
-          echo "⚠️ No test_suite.py found. Skipping tests."
+          echo "No test_suite.py found."
         fi
