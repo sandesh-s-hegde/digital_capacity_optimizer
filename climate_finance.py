@@ -1,62 +1,52 @@
 import numpy as np
-import pandas as pd
 import plotly.graph_objects as go
-from scipy.stats import norm
 
 
-def simulate_ets_carbon_pricing(current_price: float = 85.0, volatility: float = 0.40,
-                                drift: float = 0.05, days: int = 365,
-                                simulations: int = 2000) -> dict:
-    """
-    Simulates European Union Emissions Trading System (EU ETS) carbon prices
-    using vectorized Geometric Brownian Motion (GBM).
-    """
+def simulate_ets_carbon_pricing(
+    current_price: float = 85.0,
+    volatility: float = 0.40,
+    drift: float = 0.05,
+    days: int = 365,
+    simulations: int = 2000
+) -> dict:
+    """Simulates EU ETS carbon prices using fully vectorized Geometric Brownian Motion."""
+    np.random.seed(42)
     dt = 1 / 365
-    np.random.seed(42)  # For deterministic academic review
 
-    # 1. Initialize Price Matrix
-    price_paths = np.zeros((days, simulations))
-    price_paths[0] = current_price
+    # Generate standard normal shocks for the entire matrix simultaneously
+    Z = np.random.standard_normal((days, simulations))
+    Z[0] = 0.0
 
-    # 2. Vectorized GBM Simulation
-    # Eliminates slow python loops for instant Monte Carlo generation
-    for t in range(1, days):
-        Z = np.random.standard_normal(simulations)
-        # GBM Formula: S(t) = S(t-1) * exp((μ - 0.5 * σ^2)dt + σ * sqrt(dt) * Z)
-        step = np.exp((drift - 0.5 * volatility ** 2) * dt + volatility * np.sqrt(dt) * Z)
-        price_paths[t] = price_paths[t - 1] * step
+    # Calculate Brownian paths (W_t) via cumulative sum
+    W = np.cumsum(Z, axis=0) * np.sqrt(dt)
 
-    # 3. Extract Financial Risk Metrics (End of Year Prices)
+    # Generate time array and broadcast it to the matrix shape
+    time_steps = np.linspace(0, 1, days)[:, np.newaxis]
+
+    # Execute full GBM matrix calculation in O(1) Python time
+    price_paths = current_price * np.exp((drift - 0.5 * volatility ** 2) * time_steps + volatility * W)
+
     final_prices = price_paths[-1]
-    expected_price = np.mean(final_prices)
-    cvar_95 = np.percentile(final_prices, 95)  # 95th Percentile Worst-Case Cost
 
     return {
         "paths": price_paths,
-        "expected_price": float(expected_price),
-        "cvar_95": float(cvar_95)
+        "expected_price": float(np.mean(final_prices)),
+        "cvar_95": float(np.percentile(final_prices, 95))
     }
 
 
-def plot_carbon_risk_simulation(current_price: float, volatility: float,
-                                total_emissions_tons: float):
-    """
-    Generates a FinTech-grade Plotly visualization of Carbon Market Risk.
-    """
-    # Run the simulation
+def plot_carbon_risk_simulation(current_price: float, volatility: float, total_emissions_tons: float):
+    """Generates an interactive Plotly visualization of stochastic carbon market risk."""
     sim_data = simulate_ets_carbon_pricing(current_price=current_price, volatility=volatility)
     paths = sim_data["paths"]
 
-    # Calculate financial exposure
     current_exposure = current_price * total_emissions_tons
     expected_exposure = sim_data["expected_price"] * total_emissions_tons
     worst_case_exposure = sim_data["cvar_95"] * total_emissions_tons
 
     fig = go.Figure()
-
-    # Plot a sample of 100 paths to prevent browser memory crashes
-    sample_paths = paths[:, :100]
     time_steps = np.arange(365)
+    sample_paths = paths[:, :100]
 
     for i in range(sample_paths.shape[1]):
         fig.add_trace(go.Scatter(
@@ -65,18 +55,14 @@ def plot_carbon_risk_simulation(current_price: float, volatility: float,
             showlegend=False
         ))
 
-    # Add Expected Mean Line
-    mean_path = np.mean(paths, axis=1)
     fig.add_trace(go.Scatter(
-        x=time_steps, y=mean_path,
+        x=time_steps, y=np.mean(paths, axis=1),
         mode='lines', line=dict(color='#28B463', width=3),
         name=f"Expected Mean (${sim_data['expected_price']:.2f})"
     ))
 
-    # Add 95% CVaR Line
-    cvar_path = np.percentile(paths, 95, axis=1)
     fig.add_trace(go.Scatter(
-        x=time_steps, y=cvar_path,
+        x=time_steps, y=np.percentile(paths, 95, axis=1),
         mode='lines', line=dict(color='#E74C3C', width=3, dash='dash'),
         name=f"95% Risk Bound (${sim_data['cvar_95']:.2f})"
     ))
