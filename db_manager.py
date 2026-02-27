@@ -1,11 +1,12 @@
 import os
+import logging
 import psycopg2
-from psycopg2.extras import RealDictCursor
 import pandas as pd
-from datetime import datetime
 
+# Configure enterprise-grade logging
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logger = logging.getLogger(__name__)
 
-# --- DATABASE CONNECTION ---
 def get_db_connection():
     """Establishes a connection to the PostgreSQL database with SSL fallback."""
     url = os.getenv('DATABASE_URL')
@@ -13,30 +14,22 @@ def get_db_connection():
         return None
 
     try:
-        # Standard connection
-        conn = psycopg2.connect(url)
-        return conn
-    except Exception:
+        return psycopg2.connect(url)
+    except psycopg2.OperationalError:
         try:
-            # Fallback for local-to-cloud connections requiring SSL
-            conn = psycopg2.connect(url, sslmode='require')
-            return conn
+            return psycopg2.connect(url, sslmode='require')
         except Exception as e:
-            print(f"❌ DB Connection Error: {e}")
+            logger.error("Database connection failed: %s", e)
             return None
 
-
-# --- INITIALIZE DATABASE ---
 def init_db():
-    """
-    Initializes the database schema.
-    Ensures the 'inventory' table exists on the new Render instance.
-    """
+    """Initializes the required database schema."""
     conn = get_db_connection()
-    if conn:
-        try:
-            cur = conn.cursor()
-            # Standardizing table for v4.2.5 Research Artifact
+    if not conn:
+        return
+
+    try:
+        with conn.cursor() as cur:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS inventory (
                     id SERIAL PRIMARY KEY,
@@ -50,17 +43,13 @@ def init_db():
                 );
             """)
             conn.commit()
-            cur.close()
-            print("✅ Database Schema Verified.")
-        except Exception as e:
-            print(f"❌ Schema Initialization Error: {e}")
-        finally:
-            conn.close()
+    except Exception as e:
+        logger.error("Schema initialization error: %s", e)
+    finally:
+        conn.close()
 
-
-# --- LOAD DATA ---
 def load_data(product_name=None):
-    """Loads inventory data into a DataFrame."""
+    """Loads inventory data into a Pandas DataFrame."""
     conn = get_db_connection()
     if not conn:
         return pd.DataFrame()
@@ -81,13 +70,11 @@ def load_data(product_name=None):
 
         return df
     except Exception as e:
-        print(f"❌ Load Error: {e}")
+        logger.error("Data load error: %s", e)
         return pd.DataFrame()
     finally:
         conn.close()
 
-
-# --- ADD SINGLE RECORD ---
 def add_record(date_val, product, demand):
     """Inserts a single transaction into the database."""
     conn = get_db_connection()
@@ -95,99 +82,87 @@ def add_record(date_val, product, demand):
         return False
 
     try:
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO inventory (date, product_name, demand) VALUES (%s, %s, %s)",
-            (date_val, product, demand)
-        )
-        conn.commit()
-        cur.close()
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO inventory (date, product_name, demand) VALUES (%s, %s, %s)",
+                (date_val, product, demand)
+            )
+            conn.commit()
         return True
     except Exception as e:
-        print(f"❌ Add Error: {e}")
+        logger.error("Add record error: %s", e)
         return False
     finally:
         conn.close()
 
-
-# --- BULK IMPORT ---
 def bulk_import_csv(df):
     """Efficiently uploads a pandas DataFrame to the database."""
     conn = get_db_connection()
     if not conn:
-        return False, "No Database Connection"
+        return False, "No database connection."
 
     try:
-        cur = conn.cursor()
-        # Ensure we only try to import columns that exist in the CSV
-        cols = ['date', 'product_name', 'demand']
-        data_tuples = [tuple(x) for x in df[cols].to_numpy()]
+        with conn.cursor() as cur:
+            cols = ['date', 'product_name', 'demand']
+            data_tuples = [tuple(x) for x in df[cols].to_numpy()]
 
-        query = "INSERT INTO inventory (date, product_name, demand) VALUES (%s, %s, %s)"
-        cur.executemany(query, data_tuples)
-
-        conn.commit()
-        cur.close()
+            query = "INSERT INTO inventory (date, product_name, demand) VALUES (%s, %s, %s)"
+            cur.executemany(query, data_tuples)
+            conn.commit()
         return True, f"Successfully imported {len(df)} records."
     except Exception as e:
+        logger.error("Bulk import error: %s", e)
         return False, str(e)
     finally:
         conn.close()
 
-
-# --- GET UNIQUE PRODUCTS ---
 def get_unique_products():
-    """Returns a list of unique product names for selection UI."""
+    """Returns a list of unique product names."""
     conn = get_db_connection()
     if not conn:
         return []
 
     try:
-        cur = conn.cursor()
-        cur.execute("SELECT DISTINCT product_name FROM inventory ORDER BY product_name;")
-        rows = cur.fetchall()
-        cur.close()
+        with conn.cursor() as cur:
+            cur.execute("SELECT DISTINCT product_name FROM inventory ORDER BY product_name;")
+            rows = cur.fetchall()
         return [row[0] for row in rows]
     except Exception as e:
-        print(f"❌ Filter Error: {e}")
+        logger.error("Fetch unique products error: %s", e)
         return []
     finally:
         conn.close()
 
-
-# --- RESET DATABASE ---
 def reset_database():
-    """Wipes all data while keeping the schema intact."""
+    """Truncates the inventory table, resetting all data."""
     conn = get_db_connection()
     if not conn:
         return False
 
     try:
-        cur = conn.cursor()
-        cur.execute("TRUNCATE TABLE inventory RESTART IDENTITY;")
-        conn.commit()
-        cur.close()
+        with conn.cursor() as cur:
+            cur.execute("TRUNCATE TABLE inventory RESTART IDENTITY;")
+            conn.commit()
         return True
     except Exception as e:
-        print(f"❌ Reset Error: {e}")
+        logger.error("Database reset error: %s", e)
         return False
     finally:
         conn.close()
 
-
-# --- DELETE SPECIFIC RECORD ---
 def delete_record(record_id):
     """Deletes a specific record by ID."""
     conn = get_db_connection()
-    if conn:
-        try:
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM inventory WHERE id = %s;", (record_id,))
+    if not conn:
+        return False, "Connection failed."
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM inventory WHERE id = %s;", (record_id,))
             conn.commit()
-            cursor.close()
-            return True, "Record deleted."
-        except Exception as e:
-            return False, str(e)
-        finally:
-            conn.close()
-    return False, "Connection failed."
+        return True, "Record deleted."
+    except Exception as e:
+        logger.error("Delete record error: %s", e)
+        return False, str(e)
+    finally:
+        conn.close()
