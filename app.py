@@ -433,7 +433,7 @@ if df is not None and not df.empty:
 
             if delta > 0:
                 st.success(
-                    f"Strategy: Sourcing from India remains profitable. The Labor arbitrage (${eu_price - in_price:.2f}) absorbs the ${cbam_cost:.2f} Green Tax.")
+                    f"Strategy: Sourcing from India remains profitable. The Labor arbitrage (\${eu_price - in_price:.2f}) absorbs the \${cbam_cost:.2f} Green Tax.")
             else:
                 st.error("Strategy: Reshore to Europe. Logistics Risk and CBAM Tax negate the manufacturing savings.")
 
