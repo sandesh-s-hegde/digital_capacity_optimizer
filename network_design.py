@@ -192,7 +192,7 @@ def ask_gemini_logistics(user_question: str, route_context: Dict[str, Any]) -> s
             return "Error: Missing GEMINI_API_KEY in environment variables."
 
         genai.configure(api_key=ai_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-flash-latest')
 
         context_str = f"""
         You are a quantitative Logistics Expert analyzing a trade lane from {route_context['origin']['name']} to {route_context['dest']['name']}.

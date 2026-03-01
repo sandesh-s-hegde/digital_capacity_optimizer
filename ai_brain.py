@@ -65,7 +65,7 @@ def chat_with_data(user_query, chat_history, df, metrics):
         """
 
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-flash-latest",
             system_instruction=system_instruction
         )
 
