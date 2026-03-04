@@ -1,17 +1,21 @@
-# 1. Use a lightweight Python version
+# Base image optimized for minimal production footprint
 FROM python:3.11-slim
 
-# 2. Set the working folder
+# Enforce strict Python environment variables
+# 1. Prevents Python from writing .pyc files to disk
+# 2. Ensures stdout and stderr are streamed instantly to cloud logs
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-# 3. Copy requirements and install them
+# Copy and install dependencies first to leverage Docker layer caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# 4. Copy the rest of your application code
+# Copy the remaining application payload
 COPY . .
 
-# 5. The Start Command
-# FIXED: Removed 'migrate_csv_to_sql.py'
-# We keep "sh -c" to ensure the $PORT variable works correctly on Render
+# Execute Streamlit server bound to the dynamic cloud port
 CMD sh -c "streamlit run app.py --server.port $PORT --server.address 0.0.0.0"
