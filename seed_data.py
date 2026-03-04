@@ -15,58 +15,71 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
 
-def generate_research_data() -> List[Tuple[datetime.date, str, int]]:
-    """Generates stochastic demand patterns for global supply chain scenarios over a 2-year horizon."""
-    logger.info("Generating production-grade global logistics datasets (2-year horizon)...")
+def generate_complex_scenarios() -> List[Tuple[datetime.date, str, int]]:
+    """
+    Generates a high-volume, fully vectorized dataset representing 10 strategic
+    global supply chain lanes over a 5-year horizon (approx. 18,250 records).
+    """
+    logger.info("Initializing 5-year vectorized macroeconomic scenario generation...")
+    np.random.seed(42)
 
-    np.random.seed(42)  # Enforce determinism for academic reproducibility
-
-    data = []
+    # 5-Year Time Horizon
     end_date = datetime.today()
-    start_date = end_date - timedelta(days=730)
+    start_date = end_date - timedelta(days=1825)
     dates = pd.date_range(start=start_date, end=end_date, freq='D')
     days_arr = np.arange(len(dates))
 
-    # --- Scenario 1: SHG-ROT (Ocean Freight - Consumer Tech) ---
-    trend_1 = days_arr * 0.15 + 200
-    seasonality_1 = 40 * np.sin(2 * np.pi * days_arr / 365)
-    noise_1 = np.random.normal(0, 15, len(dates))
+    # Pre-calculate date features for rapid vectorization
+    months = dates.month
+    days = dates.day
+    is_weekend = dates.weekday >= 5
 
-    for i, d in enumerate(dates):
-        surge = 120 if d.month in [11, 12] else 0
-        shock = -150 if np.random.random() > 0.99 else 0
-        demand = int(max(0, trend_1[i] + seasonality_1[i] + noise_1[i] + surge + shock))
-        data.append((d.date(), "SHG-ROT (Ocean/Tech)", demand))
+    raw_data = []
 
-    # --- Scenario 2: BOM-FRA (China Plus One - Apparel/Pharma) ---
-    trend_2 = days_arr * 0.35 + 80
-    noise_2 = np.random.normal(0, 35, len(dates))
+    # --- Scenario Dictionary: [Name, Base Demand, Growth Rate, Volatility] ---
+    scenarios = {
+        "SHG-ROT (Ocean/Tech + CBAM)": {"base": 250, "growth": 0.05, "vol": 25},
+        "IST-MUC (Nearshore/Auto)": {"base": 100, "growth": 0.15, "vol": 12},
+        "SCL-FRA (Air/Lithium EV)": {"base": 50, "growth": 0.25, "vol": 35},
+        "BOM-LHR (Air/Pharma)": {"base": 120, "growth": 0.08, "vol": 10},
+        "SGP-LAX (Ocean/Semiconductors)": {"base": 300, "growth": 0.10, "vol": 40},
+        "MEX-DTW (Rail/Nearshore Mfg)": {"base": 180, "growth": 0.20, "vol": 15},
+        "VNM-SEA (Ocean/Apparel C+1)": {"base": 140, "growth": 0.18, "vol": 20},
+        "DXB-CDG (Air/Luxury)": {"base": 40, "growth": 0.02, "vol": 5},
+        "SAO-MIA (Air/Agriculture)": {"base": 200, "growth": 0.05, "vol": 30},
+        "TPE-NRT (Air/Components)": {"base": 220, "growth": 0.04, "vol": 45}
+    }
 
-    for i, d in enumerate(dates):
-        q_end_push = 80 if d.day > 25 and d.month in [3, 6, 9, 12] else 0
-        demand = int(max(0, trend_2[i] + noise_2[i] + q_end_push))
-        data.append((d.date(), "BOM-FRA (Air/Apparel)", demand))
+    logger.info("Computing vectorized demand matrices for %d global lanes...", len(scenarios))
 
-    # --- Scenario 3: BER-MUC (Domestic Road - FMCG) ---
-    trend_3 = np.full(len(dates), 300)
+    for lane, params in scenarios.items():
+        # 1. Base Trend & Noise
+        trend = days_arr * params["growth"] + params["base"]
+        noise = np.random.normal(0, params["vol"], len(dates))
 
-    for i, d in enumerate(dates):
-        if d.weekday() >= 5:
-            dow_effect = -220
-        elif d.weekday() == 0:
-            dow_effect = 90
-        else:
-            dow_effect = 0
+        # 2. Universal Seasonality (Sine wave)
+        seasonality = (params["base"] * 0.15) * np.sin(2 * np.pi * days_arr / 365)
 
-        noise_3 = np.random.normal(0, 12)
-        demand = int(max(0, trend_3[i] + dow_effect + noise_3))
-        data.append((d.date(), "BER-MUC (Road/FMCG)", demand))
+        # 3. Vectorized Shocks & Surges
+        surge = np.where(np.isin(months, [10, 11]), params["base"] * 0.3, 0)
+        q_end_push = np.where((days > 25) & np.isin(months, [3, 6, 9, 12]), params["base"] * 0.2, 0)
 
-    return data
+        # Macro-shocks (1% chance of severe disruption)
+        shock_matrix = np.where(np.random.random(len(dates)) > 0.99, -params["base"] * 0.6, 0)
+
+        # 4. Final Matrix Calculation
+        total_demand = trend + seasonality + noise + surge + q_end_push + shock_matrix
+        total_demand = np.maximum(0, np.round(total_demand)).astype(int)
+
+        # 5. Append to dataset
+        lane_data = list(zip(dates.date, [lane] * len(dates), total_demand.tolist()))
+        raw_data.extend(lane_data)
+
+    return raw_data
 
 
 def seed_database() -> None:
-    """Clears existing data and injects synthetic research records into the database."""
+    """Executes a high-performance batch insertion into the cloud PostgreSQL instance."""
     if not os.getenv("DATABASE_URL"):
         logger.error("DATABASE_URL not found in environment variables.")
         return
@@ -77,33 +90,33 @@ def seed_database() -> None:
             logger.error("Failed to connect via db_manager. Check URL credentials.")
             return
 
-        logger.info("Connected to database.")
-
         with conn.cursor() as cur:
-            logger.info("Clearing old simulation data...")
+            logger.info("Flushing legacy transactional data from 'inventory' table...")
             cur.execute("DELETE FROM inventory;")
 
-            raw_data = generate_research_data()
+            raw_data = generate_complex_scenarios()
 
-            logger.info("Injecting %d records into inventory table...", len(raw_data))
+            logger.info("Executing batch insertion of %d records...", len(raw_data))
+
+            # Using executemany for safe, parameterized batch inserts
             query = "INSERT INTO inventory (date, product_name, demand) VALUES (%s, %s, %s)"
             cur.executemany(query, raw_data)
             conn.commit()
 
-        logger.info("Successfully inserted %d records. System is now populated.", len(raw_data))
+        logger.info("Stress test injection complete. Database is armed and ready.")
 
     except Exception as e:
-        logger.error("Error during seeding: %s", e)
+        logger.error("Critical error during database seeding: %s", e)
     finally:
         if 'conn' in locals() and conn:
             conn.close()
 
 
 if __name__ == "__main__":
-    logger.warning("This operation will wipe the 'inventory' table on the target database.")
-    confirm = input("Type 'yes' to proceed with Research Data Injection: ")
+    logger.warning("Executing this script will OVERWRITE the production database.")
+    confirm = input("Type 'yes' to proceed with High-Volume Data Injection: ")
 
     if confirm.lower().strip() == "yes":
         seed_database()
     else:
-        logger.info("Operation cancelled.")
+        logger.info("Operation safely aborted.")
