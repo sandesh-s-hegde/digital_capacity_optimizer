@@ -1,6 +1,42 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 
+def inject_custom_css():
+    """Injects standard professional CSS for button and metric styling."""
+    st.markdown("""
+        <style>
+            /* Professional Button Styling */
+            .grafana-button {
+                display: inline-block;
+                padding: 10px 20px;
+                background-color: #F47A20; /* Grafana Brand Orange */
+                color: white !important;
+                text-decoration: none;
+                border-radius: 4px;
+                font-weight: bold;
+                border: none;
+                transition: background-color 0.3s;
+                text-align: center;
+                margin: 10px 0px;
+            }
+            .grafana-button:hover {
+                background-color: #d66a1a;
+            }
+            /* Standard metric alignment */
+            [data-testid="stMetricValue"] {
+                font-size: 1.6rem !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+def render_grafana_button():
+    """Renders the standard action button for the external dashboard."""
+    public_url = "https://sandeshshegde.grafana.net/public-dashboards/7d2822d2b93f404bbd61d38b37d639ee"
+    st.markdown(f'''
+        <a href="{public_url}" target="_blank" class="grafana-button">
+            🚀 Open Live Grafana Dashboard
+        </a>
+    ''', unsafe_allow_html=True)
 
 def render_chat_ui(df, metrics, ai_brain, extra_context="", key="default_chat"):
     """Renders the AI chat interface and handles message state."""
