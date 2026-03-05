@@ -174,7 +174,7 @@ if df is not None and not df.empty:
     dependency_pct = cooperation_metrics["dependency_ratio"]
 
     combined_volatility_est = (lead_time_months * (std_dev_demand ** 2) + (raw_avg_demand ** 2) * (
-            lead_time_volatility ** 2)) ** 0.5
+        lead_time_volatility ** 2)) ** 0.5
     resilience_score = inventory_math.calculate_resilience_score(sim_safety_stock, combined_volatility_est,
                                                                  dependency_pct)
 
@@ -226,7 +226,7 @@ if df is not None and not df.empty:
                 if map_fig:
                     st.plotly_chart(map_fig, use_container_width=True)
                 else:
-                    st.info("Select a valid Route (e.g., BER-MUC)")
+                    st.info("📍 Geospatial mapping is currently optimizing for this specific product lane.")
 
             f_df = forecast.generate_forecast(df) if st.checkbox("Show Demand Forecast", value=True) else None
 
@@ -286,9 +286,34 @@ if df is not None and not df.empty:
             st.info("The Live Observability Dashboard is hosted on Grafana Cloud for enterprise-grade monitoring.")
             ui_views.render_grafana_button()
 
-            ui_views.render_chat_ui(df, metrics, ai_brain,
-                                    extra_context=f"LSP Context: Resilience {metrics['resilience_score']}, Mode {transport_mode}",
-                                    key="ops_chat")
+            full_macro_df = db_manager.load_data(None)
+            if full_macro_df is not None and not full_macro_df.empty:
+                stats = {
+                    "count": full_macro_df['product_name'].nunique(),
+                    "avg": int(full_macro_df['demand'].mean()),
+                    "max_lane": full_macro_df.groupby('product_name')['demand'].mean().idxmax(),
+                    "latest_vol": int(full_macro_df.iloc[-1]['demand']),
+                    "volatility": "High" if full_macro_df['demand'].std() > 50 else "Stable"
+                }
+                dashboard_briefing = (
+                    f"GLOBAL DASHBOARD SUMMARY: {stats['count']} lanes active. "
+                    f"Network Average: {stats['avg']} units. "
+                    f"Highest Volume Lane: {stats['max_lane']}. "
+                    f"Current Network Status: {stats['volatility']}. "
+                    f"Most recent data point: {stats['latest_vol']} units."
+                )
+            else:
+                dashboard_briefing = "Global Dashboard is empty."
+
+            safe_df = df.tail(30) if df is not None else df
+
+            ui_views.render_chat_ui(
+                safe_df,
+                metrics,
+                ai_brain,
+                extra_context=f"LSP Context: Resilience {metrics['resilience_score']}, Mode {transport_mode}. {dashboard_briefing}",
+                key="ops_chat"
+            )
 
         with tab2:
             st.subheader("Financial Optimization")
@@ -314,7 +339,7 @@ if df is not None and not df.empty:
                 m3.metric("VaR (95%)", f"${sim_metrics['var_95']}", "Worst Case")
                 st.plotly_chart(sim_fig, use_container_width=True)
 
-                ui_views.render_chat_ui(df, metrics, ai_brain,
+                ui_views.render_chat_ui(df.tail(30), metrics, ai_brain,
                                         extra_context=f"Fin Context: Avg Profit ${sim_metrics['avg_profit']}",
                                         key="fin_chat")
             else:
@@ -339,7 +364,6 @@ if df is not None and not df.empty:
                     opt_ss = max(0, z_score * std_dev_demand)
 
                     np.random.seed(42)
-                    # Vectorized Monte Carlo generation
                     demands = np.random.normal(total_workload, std_dev_demand, sim_days)
 
                     cap_a = total_workload + current_ss
@@ -375,7 +399,7 @@ if df is not None and not df.empty:
                 res = st.session_state.sim_results
                 sim_ctx = f"Simulation Run: Optimal SS {int(res['optimal_ss'])}, Margin ${res.get('margin', margin)}, Holding ${holding_cost}"
 
-            ui_views.render_chat_ui(df, metrics, ai_brain, extra_context=sim_ctx, key="research_chat")
+            ui_views.render_chat_ui(df.tail(30), metrics, ai_brain, extra_context=sim_ctx, key="research_chat")
 
         with tab4:
             st.subheader("Global Sourcing Strategy (China Plus One)")
@@ -457,15 +481,14 @@ if df is not None and not df.empty:
                     freight_range = np.linspace(5.0, max_freight, 20)
                     carbon_range = np.linspace(0, max_carbon, 20)
 
-                    # Vectorized heat map generation
                     C, F = np.meshgrid(carbon_range, freight_range)
                     cost_eu_grid = eu_price + ((eu_co2 / 1000) * C)
                     total_eu_grid = cost_eu_grid + (
-                            (eu_lead / 365) * demand * cost_eu_grid * (holding_rate / 100) / demand)
+                        (eu_lead / 365) * demand * cost_eu_grid * (holding_rate / 100) / demand)
 
                     cost_in_grid = in_price + F + (in_price * (tariff / 100)) + ((in_co2 / 1000) * C)
                     total_in_grid = cost_in_grid + (
-                            (in_lead / 365) * demand * cost_in_grid * (holding_rate / 100) / demand)
+                        (in_lead / 365) * demand * cost_in_grid * (holding_rate / 100) / demand)
 
                     z_values = total_eu_grid - total_in_grid
 
@@ -478,7 +501,7 @@ if df is not None and not df.empty:
                     st.plotly_chart(fig_heat, use_container_width=True)
 
             fta_context = f"Sourcing: {winner} is optimal by ${abs(delta):.2f}. CBAM penalty for offshore: ${cbam_cost:.2f}."
-            ui_views.render_chat_ui(df, metrics, ai_brain, extra_context=fta_context, key="fta_chat")
+            ui_views.render_chat_ui(df.tail(30), metrics, ai_brain, extra_context=fta_context, key="fta_chat")
 
             st.divider()
             st.subheader("FinTech Climate Risk Engine")
