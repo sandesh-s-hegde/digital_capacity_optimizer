@@ -284,6 +284,12 @@ if df is not None and not df.empty:
                                     extra_context=f"LSP Context: Resilience {metrics['resilience_score']}, Mode {transport_mode}",
                                     key="ops_chat")
 
+        st.subheader("Global Macroeconomic Observability (Live)")
+        public_url = "https://sandeshshegde.grafana.net/public-dashboards/7d2822d2b93f404bbd61d38b37d639ee"
+
+        st.components.v1.iframe(public_url, height=600, scrolling=True)
+        st.caption("Live feed from PostgreSQL backend via Grafana Cloud")
+
         with tab2:
             st.subheader("Financial Optimization")
             if sp > uc:
