@@ -281,13 +281,14 @@ if df is not None and not df.empty:
                         st.download_button("Download PDF", pdf_bytes, f"Report_{metrics['product_name']}.pdf",
                                            "application/pdf")
 
+            st.divider()
+            st.subheader("Global Macroeconomic Observability (Live)")
+            st.info("The Live Observability Dashboard is hosted on Grafana Cloud for enterprise-grade monitoring.")
+            ui_views.render_grafana_button()
+
             ui_views.render_chat_ui(df, metrics, ai_brain,
                                     extra_context=f"LSP Context: Resilience {metrics['resilience_score']}, Mode {transport_mode}",
                                     key="ops_chat")
-
-        st.subheader("Global Macroeconomic Observability (Live)")
-        st.info("The Live Observability Dashboard is hosted on Grafana Cloud for enterprise-grade monitoring.")
-        ui_views.render_grafana_button()
 
         with tab2:
             st.subheader("Financial Optimization")
