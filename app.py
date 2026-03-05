@@ -26,6 +26,7 @@ import ui_views
 load_dotenv()
 
 st.set_page_config(page_title="LSP Digital Capacity Twin", page_icon="🚛", layout="wide")
+ui_views.inject_custom_css()
 
 st.sidebar.header("LSP Data Feed")
 source_option = st.sidebar.radio("Mode:", ("Live WMS Database", "Sandbox (CSV)"))
@@ -285,10 +286,8 @@ if df is not None and not df.empty:
                                     key="ops_chat")
 
         st.subheader("Global Macroeconomic Observability (Live)")
-        public_url = "https://sandeshshegde.grafana.net/public-dashboards/7d2822d2b93f404bbd61d38b37d639ee"
-
-        st.components.v1.iframe(public_url, height=600, scrolling=True)
-        st.caption("Live feed from PostgreSQL backend via Grafana Cloud")
+        st.info("The Live Observability Dashboard is hosted on Grafana Cloud for enterprise-grade monitoring.")
+        ui_views.render_grafana_button()
 
         with tab2:
             st.subheader("Financial Optimization")
