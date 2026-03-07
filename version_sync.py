@@ -7,7 +7,8 @@ from typing import Dict
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
-VERSION: str = "4.2.5"
+# Bumped to the new Enterprise Observability Release
+VERSION: str = "5.0.0"
 
 FILES_TO_UPDATE: Dict[str, str] = {
     "app.py": r'v\d+\.\d+\.\d+',
@@ -30,6 +31,7 @@ def sync_versions() -> None:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
+        # Route the regex replacement based on file type syntax
         if file_path == "__init__.py":
             new_content = re.sub(pattern, f'__version__ = "{VERSION}"', content)
         elif file_path == "pyproject.toml":

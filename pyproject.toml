@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lsp_digital_twin"
-version = "4.2.5"
+version = "5.0.0"
 authors = [
   { name="Sandesh Hegde", email="s.sandesh.hegde@gmail.com" },
 ]

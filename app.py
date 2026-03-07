@@ -125,7 +125,7 @@ partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0)
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.divider()
-st.sidebar.caption("LSP Digital Twin | v4.2.6 | System: Frankfurt | Status: Online")
+st.sidebar.caption("LSP Digital Twin | v5.0.0 | System: Frankfurt | Status: Online")
 
 st.title("🚛 LSP Digital Capacity Twin")
 
@@ -628,7 +628,7 @@ if df is not None and not df.empty:
                 st.rerun()
 
 st.markdown("---")
-st.caption(f"© 2026 LSP Digital Twin | v4.2.6 | Network Designer Edition")
+st.caption(f"© 2026 LSP Digital Twin | v5.0.0 | Network Designer Edition")
 
 if source_option == "Live WMS Database" and df is not None:
     with st.expander("Inspect Warehouse Logs"):
