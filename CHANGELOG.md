@@ -2,6 +2,20 @@
 
 All notable changes to the "Financial Digital Twin" research artifact will be documented in this file.
 
+## [5.0.0] - 2026-03-07
+### Added
+- **Global Observability Hub:** Integrated Grafana Cloud telemetry and a dedicated launch button directly into the Capacity Hub (Tab 1).
+- **Semantic Data Compression:** Implemented 'Global Briefing' summarization pipeline to pass macro-network statistics into the AI without exceeding token limits.
+
+### Changed
+- **AI Intelligence Upgrade:** Updated the Google Generative AI model endpoint to `gemini-2.5-flash` for enhanced reasoning, speed, and to resolve deprecation warnings.
+- **Contextual Ingestion:** Modified the RAG pipeline to dynamically inject the most recent 30 rows of time-series data (Operational, Financial, and Strategic metrics) for granular day-to-day analysis.
+- **UI Flow Optimization:** Reordered the Streamlit application flow to Report Generation -> Global Observability -> AI Strategy Assistant.
+
+### Fixed
+- **API Resilience:** Added exponential backoff and retry logic (max 3 attempts) to gracefully handle HTTP 429 rate limits and prevent AI timeout crashes.
+- **UI Rendering:** Fixed Streamlit tab indentation anomalies and replaced hardcoded map fallback warnings with professional UI captions.
+
 ## [4.2.5] - 2026-02-18
 ### Added
 - **Geospatial Network Designer:** Integration with Google Maps Platform for live trade lane visualization and interactive route analysis.
