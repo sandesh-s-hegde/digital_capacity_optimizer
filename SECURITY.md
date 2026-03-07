@@ -6,9 +6,9 @@ As this Decision Support System (DSS) is both an active research artifact and a 
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 4.2.x   | :white_check_mark: |
-| 4.0.x   | :warning: (Critical patches only) |
-| < 4.0   | :x:                |
+| 5.0.x   | :white_check_mark: |
+| 4.2.x   | :warning: (Critical patches only) |
+| < 4.2   | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -22,7 +22,8 @@ Instead, please report it via email directly to the repository owner at **s.sand
 
 When deploying or reviewing this artifact, please note the following security implementations:
 
-* **Decoupled Authentication:** The system uses distinct, strictly-scoped API keys for geospatial mapping (`GOOGLE_API_KEY`) and AI reasoning (`GEMINI_API_KEY`) to prevent cross-service privilege escalation and billing attacks.
+* **Decoupled Authentication:** The system uses distinct, strictly-scoped API keys for geospatial mapping (`GOOGLE_API_KEY`), AI reasoning (`GEMINI_API_KEY`), and telemetry to prevent cross-service privilege escalation and billing attacks.
 * **Zero-Trust Secrets:** No keys or database credentials are ever committed to this repository. Users must supply their own keys via a local `.env` file or a cloud secrets manager (e.g., Streamlit Secrets / Render Environment Variables).
 * **Database Encryption:** The PostgreSQL network twin enforces `sslmode=require` for all cloud connections, ensuring logistics and inventory data remain encrypted in transit.
-* **Input Sanitization:** User inputs passed through the Streamlit UI and location search boxes are sanitized prior to backend execution to prevent malicious database queries.
+* **Input Sanitization & Context Security:** User inputs passed through the Streamlit UI and location search boxes are sanitized. Furthermore, the v5.0.0 semantic data compression pipeline ensures that raw, unbound time-series data does not overflow into the LLM context, mitigating prompt injection and token-exhaustion risks.
+* **Denial of Service (DoS) Mitigation:** The v5.0.0 AI pipeline implements exponential backoff and retry logic (max 3 attempts) to gracefully handle HTTP 429 rate limits, preventing application crashes from API exhaustion attacks.
