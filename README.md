@@ -171,4 +171,6 @@ If you use this software in your research, please cite it as follows:
 | Phase 4 | Strategic | Global Sourcing & Geospatial Network Design | ✅ Done |
 | Phase 5 | Observability | **Grafana Telemetry & AI Context Optimization** | ✅ **Stable (v5.0)** |
 
-➡️ **Next Evolution:** Development has now shifted to the Micro-Tactical layer, building headless task allocation and shift automation via the [LSP Workforce & Dispatch API](https://github.com/sandesh-s-hegde/lsp-workforce-api).
+---
+
+> ➡️ **Next Evolution:** The project has expanded into the **Tactical Execution Layer**. Strategic capacity shortfalls identified by this Twin are now automatically routed to the [B2B Fleet Aggregator API](https://github.com/sandesh-s-hegde/b2b-fleet-aggregator-api). This middleware bridges the gap between macro-forecasting and real-world fulfillment by aggregating commercial vehicle inventory from third-party rental suppliers.
