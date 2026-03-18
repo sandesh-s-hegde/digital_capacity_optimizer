@@ -127,6 +127,21 @@ streamlit run app.py
 
 ---
 
+## ☁️ Production Infrastructure (Multi-Cloud)
+To bypass standard cloud-provider limitations and ensure high availability, this application utilizes a decoupled, multi-cloud architecture:
+* **Compute/Hosting:** Render (Frankfurt Region)
+* **Storage/Database:** Neon Serverless PostgreSQL (Frankfurt Region)
+
+### 💾 Data Hydration
+The production database is hydrated using a custom vectorized NumPy simulation generating 5-years of global supply chain telemetry (18,000+ records). 
+To re-seed the database:
+```bash
+python database_schema.py
+python seed_data.py
+
+```
+---
+
 ## 📄 Citation
 
 If you use this software in your research, please cite it as follows:
