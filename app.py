@@ -26,7 +26,6 @@ import ui_views
 load_dotenv()
 
 st.set_page_config(page_title="LSP Digital Capacity Twin", page_icon="🚛", layout="wide")
-ui_views.inject_custom_css()
 
 st.sidebar.header("LSP Data Feed")
 source_option = st.sidebar.radio("Mode:", ("Live WMS Database", "Sandbox (CSV)"))
@@ -280,11 +279,6 @@ if df is not None and not df.empty:
                         pdf_bytes = report_gen.generate_pdf(metrics, summary)
                         st.download_button("Download PDF", pdf_bytes, f"Report_{metrics['product_name']}.pdf",
                                            "application/pdf")
-
-            st.divider()
-            st.subheader("Global Macroeconomic Observability (Live)")
-            st.info("The Live Observability Dashboard is hosted on Grafana Cloud for enterprise-grade monitoring.")
-            ui_views.render_grafana_button()
 
             full_macro_df = db_manager.load_data(None)
             if full_macro_df is not None and not full_macro_df.empty:

@@ -60,7 +60,7 @@ $$\text{Safety Stock} = Z_{\alpha}\sqrt{(\overline{L}\sigma_{D}^{2})+(\overline{
 
 ### 📊 1. Global Observability & Capacity Hub
 
-* **Grafana Cloud Integration:** Real-time visual monitoring of macro-network statistics directly accessible via the UI.
+* **Embedded Observability Dashboard:** Real-time visualization of macro-network telemetry natively integrated into the user interface.
 * **Semantic Data Compression:** Summarizes 'Global Briefing' statistics to securely pass macro-network insights into the AI without exceeding token limits.
 
 ### 🤖 2. AI Strategy Assistant (Upgraded)
@@ -89,7 +89,7 @@ $$\text{Safety Stock} = Z_{\alpha}\sqrt{(\overline{L}\sigma_{D}^{2})+(\overline{
 
 * **Core Logic:** `numpy` (Monte Carlo) & `scipy.stats` (Stochastic Calculus).
 * **Intelligence Layer:** Google Gemini 2.5 Flash (via `ai_brain.py`) with semantic context injection.
-* **Observability:** Grafana Cloud.
+* **Observability:** Centralized Telemetry & Real-Time Visualization.
 * **Visualization:** `plotly.graph_objects` (Geospatial & Risk Histograms).
 * **CI/CD:** GitHub Actions.
 * **Frontend:** Streamlit (React-based) structured for optimized UI rendering.
@@ -178,13 +178,13 @@ If you use this software in your research, please cite it as follows:
 
 *This repository has reached its planned maturity and serves as the finalized Macro-Strategy layer of the supply chain architecture.*
 
-| Phase | Maturity Level | Key Capabilities | Status |
-| --- | --- | --- | --- |
-| Phase 1 | Descriptive | Static Rule-Based Logic (EOQ) | ✅ Done |
-| Phase 2 | Predictive | Cloud Database + Forecasting | ✅ Done |
-| Phase 3 | Stochastic | Multi-Modal, Monte Carlo & Resilience | ✅ Done |
-| Phase 4 | Strategic | Global Sourcing & Geospatial Network Design | ✅ Done |
-| Phase 5 | Observability | **Grafana Telemetry & AI Context Optimization** | ✅ **Stable (v5.0)** |
+| Phase | Maturity Level | Key Capabilities                                    | Status |
+| --- | --- |-----------------------------------------------------| --- |
+| Phase 1 | Descriptive | Static Rule-Based Logic (EOQ)                       | ✅ Done |
+| Phase 2 | Predictive | Cloud Database + Forecasting                        | ✅ Done |
+| Phase 3 | Stochastic | Multi-Modal, Monte Carlo & Resilience               | ✅ Done |
+| Phase 4 | Strategic | Global Sourcing & Geospatial Network Design         | ✅ Done |
+| Phase 5 | Observability | **Distributed Telemetry & AI Context Optimization** | ✅ **Stable (v5.0)** |
 
 ---
 

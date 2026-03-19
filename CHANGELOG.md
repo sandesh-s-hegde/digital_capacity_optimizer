@@ -4,7 +4,6 @@ All notable changes to the "Financial Digital Twin" research artifact will be do
 
 ## [5.0.0] - 2026-03-07
 ### Added
-- **Global Observability Hub:** Integrated Grafana Cloud telemetry and a dedicated launch button directly into the Capacity Hub (Tab 1).
 - **Semantic Data Compression:** Implemented 'Global Briefing' summarization pipeline to pass macro-network statistics into the AI without exceeding token limits.
 
 ### Changed

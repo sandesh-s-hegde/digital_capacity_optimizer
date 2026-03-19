@@ -7,7 +7,7 @@ title: "LSP Digital Capacity Twin: Multi-Modal Stochastic Engine"
 version: 5.0.0
 date-released: 2026-03-07
 url: "https://github.com/sandesh-s-hegde/digital_capacity_optimizer"
-abstract: "A Decision Support System (DSS) for Logistics Service Providers operationalizing supply chain resilience, horizontal cooperation, and multi-modal transport strategy. The artifact integrates a Monte Carlo risk engine, carbon emission tracking (Green Logistics), and a Global Sourcing Simulator (China Plus One). The v5.0.0 Enterprise Observability edition introduces Grafana Cloud telemetry for real-time macro-network monitoring and an upgraded Gemini 2.5 Flash RAG pipeline with semantic data compression for granular strategic insights."
+abstract: "A Decision Support System (DSS) for Logistics Service Providers operationalizing supply chain resilience, horizontal cooperation, and multi-modal transport strategy. The artifact integrates a Monte Carlo risk engine, carbon emission tracking (Green Logistics), and a Global Sourcing Simulator (China Plus One). The v5.0.0 Enterprise Observability edition introduces an upgraded Gemini 2.5 Flash RAG pipeline with semantic data compression for granular strategic insights."
 keywords:
   - "Logistics Service Providers"
   - "Supply Chain Resilience"

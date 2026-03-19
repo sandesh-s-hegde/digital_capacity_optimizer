@@ -26,6 +26,8 @@ body:
       label: Affected Research Module
       description: Which part of the Digital Twin produced the anomaly?
       options:
+        - Observability: Distributed Telemetry & Semantic Context
+        - AI Intelligence: Gemini 2.5 Flash RAG
         - FinTech: Climate Risk & ETS Pricing (GBM)
         - Strategy: Global Sourcing & CBAM Taxes
         - Platform Economics: Horizontal Cooperation
@@ -50,8 +52,8 @@ body:
       label: Artifact Version
       description: What version of the Digital Twin are you auditing?
       options:
-        - v4.2.6 (Current Academic/Enterprise Release)
-        - v4.0.x (Legacy)
+        - v5.0.0 (Current Enterprise Observability Release)
+        - v4.2.x (Legacy)
         - Local / Sandbox Build
       default: 0
     validations:

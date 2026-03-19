@@ -91,8 +91,18 @@ def seed_database() -> None:
             return
 
         with conn.cursor() as cur:
+            logger.info("Verifying/Creating schema for 'inventory' table...")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS inventory (
+                    id SERIAL PRIMARY KEY,
+                    date DATE NOT NULL,
+                    product_name TEXT NOT NULL,
+                    demand INTEGER NOT NULL
+                );
+            """)
+
             logger.info("Flushing legacy transactional data from 'inventory' table...")
-            cur.execute("DELETE FROM inventory;")
+            cur.execute("TRUNCATE TABLE inventory RESTART IDENTITY;")  # Faster than DELETE
 
             raw_data = generate_complex_scenarios()
 
@@ -107,6 +117,8 @@ def seed_database() -> None:
 
     except Exception as e:
         logger.error("Critical error during database seeding: %s", e)
+        if conn:
+            conn.rollback()
     finally:
         if 'conn' in locals() and conn:
             conn.close()
