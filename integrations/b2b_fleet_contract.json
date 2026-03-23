@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Optimizer to Fleet API Handshake",
+  "description": "The outbound webhook payload sent from the Digital Capacity Optimizer to the B2B Fleet Aggregator when volatility breaches safety stock thresholds.",
+  "type": "object",
+  "properties": {
+    "trigger_source": {
+      "type": "string",
+      "example": "project-sentinel-cv"
+    },
+    "volatility_index": {
+      "type": "number",
+      "description": "Calculated Flow Entropy (σ)"
+    },
+    "recommended_action": {
+      "type": "string",
+      "enum": ["HOLD", "PROCURE_EXTERNAL_CAPACITY", "ACTIVATE_SURGE_PRICING"]
+    },
+    "requested_vehicle_type": {
+      "type": "string",
+      "example": "EV-Van"
+    }
+  },
+  "required": ["trigger_source", "volatility_index", "recommended_action"]
+}
