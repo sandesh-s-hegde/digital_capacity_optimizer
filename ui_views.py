@@ -2,7 +2,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 
 def render_chat_ui(df, metrics, ai_brain, extra_context="", key="default_chat"):
-    """Renders the AI chat interface and handles message state."""
+    """Renders the AI chat interface and manages session state history."""
     st.divider()
     st.subheader("💬 LSP Strategy Assistant")
 
@@ -37,7 +37,7 @@ def render_chat_ui(df, metrics, ai_brain, extra_context="", key="default_chat"):
 
 
 def render_research_lab_ui(opt_ss, curr_ss, avg_b, delta, loss_prob_b, var_95_b, p_a, p_b):
-    """Renders the layout and metric visualizations for the Research Lab tab."""
+    """Renders the metric visualizations and distribution plots for the Research Lab."""
     st.divider()
 
     k1, k2, k3 = st.columns(3)
