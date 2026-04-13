@@ -14,7 +14,6 @@ class EcosystemDispatcher:
         self.api_key = os.getenv("ECOSYSTEM_API_KEY")
 
     def _generate_trace_context(self) -> str:
-        """Generates a W3C-compliant Traceparent header for cross-service observability."""
         trace_id = uuid.uuid4().hex
         span_id = uuid.uuid4().hex[:16]
         return f"00-{trace_id}-{span_id}-01"
@@ -24,17 +23,20 @@ class EcosystemDispatcher:
         target_url = f"{self.rpa_url}/api/v1/orchestrate" if is_legacy else f"{self.b2b_url}/api/v1/bookings"
 
         traceparent = self._generate_trace_context()
+        transaction_id = payload.get("transaction_id", uuid.uuid4().hex)
 
         headers = {
             "Content-Type": "application/json",
             "X-API-Key": self.api_key,
-            "traceparent": traceparent
+            "traceparent": traceparent,
+            "Idempotency-Key": f"idem-{transaction_id}"
         }
 
         if is_legacy:
             headers["X-RPA-Signature"] = WebhookSigner.generate_signature(payload)
 
-        logger.info(f"Dispatching [Trace: {traceparent}] to {'Legacy RPA' if is_legacy else 'Modern B2B'} Gateway.")
+        logger.info(
+            f"Dispatching [Trace: {traceparent}] [Idem: {transaction_id}] to {'Legacy RPA' if is_legacy else 'Modern B2B'} Gateway.")
 
         async with httpx.AsyncClient() as client:
             try:
