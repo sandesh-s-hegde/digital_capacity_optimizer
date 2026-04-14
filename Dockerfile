@@ -1,5 +1,5 @@
 # Base image optimized for minimal production footprint
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Enforce strict Python environment variables
 # 1. Prevents Python from writing .pyc files to disk
