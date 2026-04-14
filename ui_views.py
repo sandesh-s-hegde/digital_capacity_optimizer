@@ -1,5 +1,8 @@
 import streamlit as st
 import matplotlib.pyplot as plt
+import time
+from services.dispatcher import EcosystemDispatcher
+
 
 def render_chat_ui(df, metrics, ai_brain, extra_context="", key="default_chat"):
     """Renders the AI chat interface and manages session state history."""
@@ -60,3 +63,37 @@ def render_research_lab_ui(opt_ss, curr_ss, avg_b, delta, loss_prob_b, var_95_b,
     ax.spines['right'].set_visible(False)
 
     st.pyplot(fig)
+
+
+def render_tactical_execution_ui():
+    """Renders the execution widget to dispatch AI decisions to external APIs."""
+    st.divider()
+    st.subheader("⚡ Tactical Ecosystem Execution")
+    st.caption("Bridge the gap between predictive analytics and real-world procurement.")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        supplier_type = st.radio("Target Ecosystem Route:", ["Modern B2B (API)", "Legacy Carrier (RPA)"])
+    with col2:
+        assets_needed = st.number_input("Assets to Procure", min_value=1, value=5)
+
+    if st.button("🚀 Dispatch Booking Webhook", type="primary"):
+        with st.spinner("Cryptographically signing payload and routing to middleware..."):
+
+            is_legacy = supplier_type == "Legacy Carrier (RPA)"
+            payload = {
+                "transaction_id": f"tx-{int(time.time())}",
+                "carrier_name": "MAERSK" if is_legacy else "ENTERPRISE",
+                "assets_required": assets_needed,
+                "max_budget_eur": assets_needed * 150.0,
+                "is_legacy_system": is_legacy
+            }
+
+            dispatcher = EcosystemDispatcher()
+            success = dispatcher.dispatch_sync(payload)
+
+            if success:
+                st.success(f"✅ Webhook successfully dispatched to the {'RPA Bridge' if is_legacy else 'B2B API'}!")
+                st.balloons()
+            else:
+                st.error("❌ Dispatch failed. Check API connection and logs.")

@@ -621,6 +621,9 @@ if df is not None and not df.empty:
                             st.session_state.logistics_chat_history.append(("assistant", warning_msg))
                 st.rerun()
 
+        # ---> THE INTEGRATION POINT <---
+        ui_views.render_tactical_execution_ui()
+
 st.markdown("---")
 st.caption(f"© 2026 LSP Digital Twin | v5.0.0 | Network Designer Edition")
 
