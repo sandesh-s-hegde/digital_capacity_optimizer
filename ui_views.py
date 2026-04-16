@@ -5,7 +5,6 @@ from services.dispatcher import EcosystemDispatcher
 
 
 def render_chat_ui(df, metrics, ai_brain, extra_context="", key="default_chat"):
-    """Renders the AI chat interface and manages session state history."""
     st.divider()
     st.subheader("💬 LSP Strategy Assistant")
 
@@ -40,7 +39,6 @@ def render_chat_ui(df, metrics, ai_brain, extra_context="", key="default_chat"):
 
 
 def render_research_lab_ui(opt_ss, curr_ss, avg_b, delta, loss_prob_b, var_95_b, p_a, p_b):
-    """Renders the metric visualizations and distribution plots for the Research Lab."""
     st.divider()
 
     k1, k2, k3 = st.columns(3)
@@ -65,23 +63,33 @@ def render_research_lab_ui(opt_ss, curr_ss, avg_b, delta, loss_prob_b, var_95_b,
     st.pyplot(fig)
 
 
-def render_tactical_execution_ui():
-    """Renders the execution widget to dispatch AI decisions to external APIs."""
+def render_tactical_execution_ui(key_prefix="default"):
     st.divider()
     st.subheader("⚡ Tactical Ecosystem Execution")
     st.caption("Bridge the gap between predictive analytics and real-world procurement.")
 
     col1, col2 = st.columns(2)
     with col1:
-        supplier_type = st.radio("Target Ecosystem Route:", ["Modern B2B (API)", "Legacy Carrier (RPA)"])
+        supplier_type = st.radio(
+            "Target Ecosystem Route:",
+            ["Modern B2B (API)", "Legacy Carrier (RPA)"],
+            key=f"{key_prefix}_radio"
+        )
     with col2:
-        assets_needed = st.number_input("Assets to Procure", min_value=1, value=5)
+        assets_needed = st.number_input(
+            "Assets to Procure",
+            min_value=1,
+            value=5,
+            key=f"{key_prefix}_assets"
+        )
 
-    if st.button("🚀 Dispatch Booking Webhook", type="primary"):
+    if st.button("🚀 Dispatch Booking Webhook", type="primary", key=f"{key_prefix}_btn"):
         with st.spinner("Cryptographically signing payload and routing to middleware..."):
 
             is_legacy = supplier_type == "Legacy Carrier (RPA)"
+
             payload = {
+                "Target Ecosystem Route": supplier_type,
                 "transaction_id": f"tx-{int(time.time())}",
                 "carrier_name": "MAERSK" if is_legacy else "ENTERPRISE",
                 "assets_required": assets_needed,
