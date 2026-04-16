@@ -124,7 +124,7 @@ partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0)
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.divider()
-st.sidebar.caption("LSP Digital Twin | v5.0.0 | System: Frankfurt | Status: Online")
+st.sidebar.caption("LSP Digital Twin | v5.1.0 | System: Frankfurt | Status: Online")
 
 st.title("🚛 LSP Digital Capacity Twin")
 
@@ -494,9 +494,6 @@ if df is not None and not df.empty:
                                            yaxis_title="Ocean Freight Cost ($/unit)", height=500)
                     st.plotly_chart(fig_heat, use_container_width=True)
 
-            fta_context = f"Sourcing: {winner} is optimal by ${abs(delta):.2f}. CBAM penalty for offshore: ${cbam_cost:.2f}."
-            ui_views.render_chat_ui(df.tail(30), metrics, ai_brain, extra_context=fta_context, key="fta_chat")
-
             st.divider()
             st.subheader("FinTech Climate Risk Engine")
             st.markdown("Simulate regulatory transition risk using Geometric Brownian Motion (GBM).")
@@ -527,6 +524,11 @@ if df is not None and not df.empty:
                     cf3.metric("Carbon Value at Risk (95%)", f"${cf_metrics['worst_case_exposure']:,.0f}",
                                f"{cf_metrics['worst_case_exposure'] - cf_metrics['current_exposure']:,.0f} Max Downside",
                                delta_color="inverse")
+
+            ui_views.render_tactical_execution_ui(key_prefix="tab4_exec")
+
+            fta_context = f"Sourcing: {winner} is optimal by ${abs(delta):.2f}. CBAM penalty for offshore: ${cbam_cost:.2f}."
+            ui_views.render_chat_ui(df.tail(30), metrics, ai_brain, extra_context=fta_context, key="fta_chat")
 
         with tab5:
             st.subheader("Logistics Digital Twin: Network Designer")
@@ -589,6 +591,8 @@ if df is not None and not df.empty:
                 else:
                     st.info("Enter origin and destination to visualize the trade lane.")
 
+            ui_views.render_tactical_execution_ui(key_prefix="tab5_exec")
+
             st.divider()
             st.subheader("Network Strategy Assistant")
 
@@ -621,11 +625,8 @@ if df is not None and not df.empty:
                             st.session_state.logistics_chat_history.append(("assistant", warning_msg))
                 st.rerun()
 
-        # ---> THE INTEGRATION POINT <---
-        ui_views.render_tactical_execution_ui()
-
 st.markdown("---")
-st.caption(f"© 2026 LSP Digital Twin | v5.0.0 | Network Designer Edition")
+st.caption(f"© 2026 LSP Digital Twin | v5.0.0 | Serverless Edition")
 
 if source_option == "Live WMS Database" and df is not None:
     with st.expander("Inspect Warehouse Logs"):
