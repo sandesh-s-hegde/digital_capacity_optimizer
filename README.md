@@ -93,6 +93,7 @@ $$\text{Safety Stock} = Z_{\alpha}\sqrt{(\overline{L}\sigma_{D}^{2})+(\overline{
 * **Visualization:** `plotly.graph_objects` (Geospatial & Risk Histograms).
 * **CI/CD:** GitHub Actions.
 * **Frontend:** Streamlit (React-based) structured for optimized UI rendering.
+* **Database:** Serverless PostgreSQL via Neon (Active Migration)
 
 ---
 
