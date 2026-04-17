@@ -84,6 +84,7 @@ if conn:
     conn.close()
 else:
     st.sidebar.error("Database: Offline")
+    st.sidebar.caption("⚠️ Migrating to Neon Serverless DB. Please use Sandbox (CSV) mode temporarily.")
 
 st.sidebar.divider()
 st.sidebar.header("LSP Constraints")
