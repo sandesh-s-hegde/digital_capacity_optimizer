@@ -2,7 +2,7 @@
 
 **Author:** Sandesh Hegde
 
-**Version:** v5.0.0 (Enterprise Observability Edition)
+**Version:** v5.1.0 (Serverless Edition)
 
 ## 🚀 Live Demo
 
@@ -12,7 +12,7 @@
 
 ## 📖 Executive Summary
 
-This artifact operationalizes the **"Pixels to Premiums"** research framework, serving as a comprehensive **Decision Support System (DSS)** for Logistics Service Providers (LSPs). In its final v5.0.0 iteration, it combines advanced **Risk Quantification**, **Geospatial Network Design**, and **Global Observability** to solve for the "China Plus One" strategy, multi-modal routing constraints, and real-time operational bottlenecks.
+This artifact operationalizes the **"Pixels to Premiums"** research framework, serving as a comprehensive **Decision Support System (DSS)** for Logistics Service Providers (LSPs). In its v5.1.0 iteration, it combines advanced **Risk Quantification**, **Geospatial Network Design**, **Global Observability**, and **Zero-Trust Tactical Execution** to solve for the "China Plus One" strategy, multi-modal routing constraints, and real-time operational bottlenecks.
 
 ---
 
@@ -71,7 +71,7 @@ $$\text{Safety Stock} = Z_{\alpha}\sqrt{(\overline{L}\sigma_{D}^{2})+(\overline{
 
 ### 🗺️ 3. Network Designer
 
-* **Real-World Routing:** Integrates **Google Maps Platform** to visualize live trade lanes.
+* **Real-World Routing:** Integrates **Google Maps Platform** via secure HTTPS endpoints to visualize live trade lanes.
 * **Smart Mode Selection:** Automatically determines feasibility of Road vs. Sea vs. Air based on geographic constraints.
 
 ### 🌏 4. Global Sourcing & Trade Strategy
@@ -83,17 +83,21 @@ $$\text{Safety Stock} = Z_{\alpha}\sqrt{(\overline{L}\sigma_{D}^{2})+(\overline{
 
 * **"Stress Test" Mode:** Simulates a Supply Chain Shock and instantly quantifies the crash in Resilience Scores based on current safety buffers.
 
+### ⚡ 6. Tactical Ecosystem Execution
+
+* **Zero-Trust Webhooks:** Cryptographically signs outbound payloads (HMAC SHA-256) to bridge predictive analytics directly to external procurement APIs and legacy RPA bots.
+
 ---
 
 ## ⚙️ Technical Architecture
 
 * **Core Logic:** `numpy` (Monte Carlo) & `scipy.stats` (Stochastic Calculus).
 * **Intelligence Layer:** Google Gemini 2.5 Flash (via `ai_brain.py`) with semantic context injection.
-* **Observability:** Centralized Telemetry & Real-Time Visualization.
+* **Security Layer:** Cryptographic HMAC SHA-256 Payload Signer.
 * **Visualization:** `plotly.graph_objects` (Geospatial & Risk Histograms).
-* **CI/CD:** GitHub Actions.
+* **CI/CD:** Automated Python 3.12+ testing matrix via GitHub Actions.
 * **Frontend:** Streamlit (React-based) structured for optimized UI rendering.
-* **Database:** Serverless PostgreSQL via Neon (Active Migration)
+* **Database:** Serverless PostgreSQL via Neon.
 
 ---
 
@@ -113,17 +117,19 @@ cd digital_capacity_optimizer
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Set your API Key (Create a `.env` file in the root directory with the following keys:)
-# GEMINI_API_KEY="AIzaSy..."  | Your Google AI Studio Key (For Chat).
-# GOOGLE_API_KEY="AIzaSy..."  | Your Google Maps API Key (For Network Design).
-# DATABASE_URL="postgresql://..."  | Your Render PostgreSQL connection string.
+# 3. Set your API Keys (Create a `.env` file in the root directory with the following keys:)
+# GEMINI_API_KEY="AIzaSy..."                | Your Google AI Studio Key (For Chat).
+# GOOGLE_API_KEY="AIzaSy..."                | Your Google Maps API Key (For Network Design).
+# DATABASE_URL="postgresql://..."           | Your Neon PostgreSQL connection string.
+# B2B_API_URL="[https://webhook.site/](https://webhook.site/)..."    | Endpoint for modern API routing.
+# RPA_BRIDGE_URL="[https://webhook.site/](https://webhook.site/)..." | Endpoint for legacy system routing.
+# API_SECRET_KEY="your_secret_key"          | Secret key for Zero-Trust webhook signing.
 
 # 4. Generate Research Data (Optional)
 python seed_data.py
 
 # 5. Launch the Digital Twin
 streamlit run app.py
-
 ```
 
 ---
@@ -149,17 +155,17 @@ If you use this software in your research, please cite it as follows:
 
 **Harvard Style:**
 
-> Hegde, S.S. (2026). LSP Digital Capacity Twin: Multi-Modal Stochastic Engine (Version 5.0.0) [Software]. Available at: [https://github.com/sandesh-s-hegde/digital_capacity_optimizer](https://github.com/sandesh-s-hegde/digital_capacity_optimizer)
+> Hegde, S.S. (2026). LSP Digital Capacity Twin: Multi-Modal Stochastic Engine (Version 5.1.0) [Software]. Available at: [https://github.com/sandesh-s-hegde/digital_capacity_optimizer](https://github.com/sandesh-s-hegde/digital_capacity_optimizer)
 
 **BibTeX:**
 
 ```bibtex
 @software {Hegde_LSP_Digital_Twin_2026,
   author = {Hegde, Sandesh Subramanya},
-  month = mar,
+  month = apr,
   title = {LSP Digital Capacity Twin: Multi-Modal Stochastic Engine},
-  url = {(https://github.com/sandesh-s-hegde/digital_capacity_optimizer)},
-  version = {5.0.0},
+  url = {([https://github.com/sandesh-s-hegde/digital_capacity_optimizer](https://github.com/sandesh-s-hegde/digital_capacity_optimizer))},
+  version = {5.1.0},
   year = {2026}
 }
 
@@ -169,8 +175,8 @@ If you use this software in your research, please cite it as follows:
 
 ### 🚀 Deployment Notes
 
-* **Python Version:** 3.11 (configured via `runtime.txt`)
-* **Database:** PostgreSQL 16 (Render Frankfurt)
+* **Python Version:** 3.12+ (configured via CI/CD matrix)
+* **Database:** Serverless PostgreSQL (Neon)
 * **Dependency Management:** Flexible top-level requirements for better cloud compatibility.
 
 ---
@@ -185,7 +191,8 @@ If you use this software in your research, please cite it as follows:
 | Phase 2 | Predictive | Cloud Database + Forecasting                        | ✅ Done |
 | Phase 3 | Stochastic | Multi-Modal, Monte Carlo & Resilience               | ✅ Done |
 | Phase 4 | Strategic | Global Sourcing & Geospatial Network Design         | ✅ Done |
-| Phase 5 | Observability | **Distributed Telemetry & AI Context Optimization** | ✅ **Stable (v5.0)** |
+| Phase 5 | Observability | Distributed Telemetry & AI Context Optimization     | ✅ Done |
+| Phase 6 | Execution | **Zero-Trust Tactical API & RPA Webhook Routing** | ✅ **Stable (v5.1)** |
 
 ---
 
