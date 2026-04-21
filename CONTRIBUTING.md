@@ -2,6 +2,13 @@
 
 Thank you for your interest in this research artifact.
 
+## General Guidelines
+1. **Branching:** Always create a feature branch (`feat/your-feature`) before submitting a Pull Request.
+2. **Data Hydration:** Ensure any database schema changes are reflected in the `seed_data.py` script.
+3. **Zero-Trust:** Do not hardcode API keys or database URLs. Always use the `.env.example` template.
+
+Please provide architectural justifications for any multi-cloud routing changes in your PR description.
+
 ## Research Context
 This repository serves as the executable artifact for the **"Pixels to Premiums"** research initiative. As such, the codebase is currently maintained exclusively by the primary author for the purpose of academic assessment and validation.
 
