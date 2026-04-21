@@ -19,3 +19,4 @@ env/
 *.jpg
 *.png
 README.md
+.DS_Store
