@@ -42,6 +42,21 @@ class EcosystemDispatcher:
             st.error(f"URL configuration missing for {route}.")
             return False
 
+        logger.info(f"Dispatching payload to {target_url}...")
+
+        try:
+            # Enforce a strict 10-second timeout to prevent UI thread locking
+            response = requests.post(target_url, json=secure_payload, headers=headers, timeout=10.0)
+            response.raise_for_status()
+            logger.info(f"Success! Server responded with HTTP {response.status_code}")
+            return True
+        except requests.exceptions.Timeout:
+            logger.error("Dispatch Failed: The external API timed out after 10 seconds.")
+            return False
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Dispatch Failed: Network exception occurred - {str(e)}")
+            return False
+
         try:
             response = requests.post(url, json=payload, timeout=15)
             response.raise_for_status()
