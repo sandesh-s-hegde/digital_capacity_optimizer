@@ -1,3 +1,15 @@
+import streamlit as st
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_data(sku=None):
+    """
+    Fetches supply chain telemetry from the Neon Serverless DB.
+    Cached in server memory for 5 minutes to optimize compute credits.
+    """
+    # ... (keep your existing database fetching logic exactly as is) ...
+
+
 import os
 import logging
 import psycopg2
