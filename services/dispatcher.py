@@ -1,8 +1,16 @@
 import os
 import requests
 import streamlit as st
+import logging
 from core.signer import sign_payload
 from dotenv import load_dotenv
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+logger = logging.getLogger("WebhookDispatcher")
 
 load_dotenv()
 
