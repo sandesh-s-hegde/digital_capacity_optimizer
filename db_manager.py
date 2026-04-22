@@ -1,23 +1,12 @@
-import streamlit as st
-
-
-@st.cache_data(ttl=300, show_spinner=False)
-def load_data(sku=None):
-    """
-    Fetches supply chain telemetry from the Neon Serverless DB.
-    Cached in server memory for 5 minutes to optimize compute credits.
-    """
-    # ... (keep your existing database fetching logic exactly as is) ...
-
-
 import os
 import logging
 import psycopg2
 import pandas as pd
+import streamlit as st
 
-# Configure enterprise-grade logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
+
 
 def get_db_connection():
     """Establishes a connection to the PostgreSQL database with SSL fallback."""
@@ -33,6 +22,7 @@ def get_db_connection():
         except Exception as e:
             logger.error("Database connection failed: %s", e)
             return None
+
 
 def init_db():
     """Initializes the required database schema."""
@@ -60,8 +50,13 @@ def init_db():
     finally:
         conn.close()
 
+
+@st.cache_data(ttl=300, show_spinner=False)
 def load_data(product_name=None):
-    """Loads inventory data into a Pandas DataFrame."""
+    """
+    Loads inventory data into a Pandas DataFrame.
+    Cached in server memory for 5 minutes to optimize Neon compute credits.
+    """
     conn = get_db_connection()
     if not conn:
         return pd.DataFrame()
@@ -75,7 +70,11 @@ def load_data(product_name=None):
             params = (product_name,)
 
         query += " ORDER BY date ASC;"
-        df = pd.read_sql(query, conn, params=params)
+
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', UserWarning)
+            df = pd.read_sql(query, conn, params=params)
 
         if not df.empty and 'date' in df.columns:
             df['date'] = pd.to_datetime(df['date'])
@@ -86,6 +85,7 @@ def load_data(product_name=None):
         return pd.DataFrame()
     finally:
         conn.close()
+
 
 def add_record(date_val, product, demand):
     """Inserts a single transaction into the database."""
@@ -100,12 +100,14 @@ def add_record(date_val, product, demand):
                 (date_val, product, demand)
             )
             conn.commit()
+        load_data.clear()  # Clear cache so UI updates immediately
         return True
     except Exception as e:
         logger.error("Add record error: %s", e)
         return False
     finally:
         conn.close()
+
 
 def bulk_import_csv(df):
     """Efficiently uploads a pandas DataFrame to the database."""
@@ -121,12 +123,14 @@ def bulk_import_csv(df):
             query = "INSERT INTO inventory (date, product_name, demand) VALUES (%s, %s, %s)"
             cur.executemany(query, data_tuples)
             conn.commit()
+        load_data.clear()
         return True, f"Successfully imported {len(df)} records."
     except Exception as e:
         logger.error("Bulk import error: %s", e)
         return False, str(e)
     finally:
         conn.close()
+
 
 def get_unique_products():
     """Returns a list of unique product names."""
@@ -145,6 +149,7 @@ def get_unique_products():
     finally:
         conn.close()
 
+
 def reset_database():
     """Truncates the inventory table, resetting all data."""
     conn = get_db_connection()
@@ -155,12 +160,14 @@ def reset_database():
         with conn.cursor() as cur:
             cur.execute("TRUNCATE TABLE inventory RESTART IDENTITY;")
             conn.commit()
+        load_data.clear()
         return True
     except Exception as e:
         logger.error("Database reset error: %s", e)
         return False
     finally:
         conn.close()
+
 
 def delete_record(record_id):
     """Deletes a specific record by ID."""
@@ -172,6 +179,7 @@ def delete_record(record_id):
         with conn.cursor() as cur:
             cur.execute("DELETE FROM inventory WHERE id = %s;", (record_id,))
             conn.commit()
+        load_data.clear()  # Clear cache so UI updates immediately
         return True, "Record deleted."
     except Exception as e:
         logger.error("Delete record error: %s", e)
