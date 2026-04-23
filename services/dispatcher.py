@@ -1,5 +1,6 @@
 import os
 import requests
+import time
 import streamlit as st
 import logging
 from core.signer import sign_payload
@@ -24,12 +25,16 @@ class EcosystemDispatcher:
         route = payload.get("Target Ecosystem Route")
 
         try:
-            signed_payload = sign_payload(payload)
-
             if route == "Modern B2B (API)":
+                signed_payload = sign_payload(payload)
                 return self._send_request(self.b2b_api_url, signed_payload, route)
+
             elif route == "Legacy Carrier (RPA)":
-                return self._send_request(self.rpa_bridge_url, signed_payload, route)
+                # Intercept and transform the payload for rigid legacy bot consumption
+                rpa_payload = self._format_for_legacy_rpa(payload)
+                signed_rpa_payload = sign_payload(rpa_payload)
+                return self._send_request(self.rpa_bridge_url, signed_rpa_payload, route)
+
             else:
                 logger.error("Unknown routing destination.")
                 st.error("Unknown routing destination.")
@@ -39,6 +44,21 @@ class EcosystemDispatcher:
             logger.error(f"Dispatch preparation failed: {str(e)}")
             st.error(f"Dispatch preparation failed: {str(e)}")
             return False
+
+    def _format_for_legacy_rpa(self, payload: dict) -> dict:
+        """
+        Flattens complex nested JSON payloads into a strict, single-level
+        dictionary required by legacy RPA queue managers.
+        """
+        logger.info("Transforming payload schema for legacy RPA bot compatibility...")
+        return {
+            "RPA_Task_ID": f"JOB-{int(time.time())}",
+            "Action": "PROCURE_CAPACITY",
+            "Target_SKU": payload.get("Target Ecosystem Route", "GENERAL_FREIGHT"),
+            "Volume_Required": payload.get("Assets to Procure", 1),
+            "Urgency_Flag": "HIGH",
+            "System_Source": "LSP_DIGITAL_TWIN_V5"
+        }
 
     def _send_request(self, url: str, payload: dict, route: str) -> bool:
         if not url:
