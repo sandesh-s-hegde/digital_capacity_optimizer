@@ -1,10 +1,10 @@
 import os
-import requests
 import time
-import streamlit as st
+import requests
 import logging
-from core.signer import sign_payload
+import streamlit as st
 from dotenv import load_dotenv
+from core.signer import sign_payload
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,7 +30,6 @@ class EcosystemDispatcher:
                 return self._send_request(self.b2b_api_url, signed_payload, route)
 
             elif route == "Legacy Carrier (RPA)":
-                # Intercept and transform the payload for rigid legacy bot consumption
                 rpa_payload = self._format_for_legacy_rpa(payload)
                 signed_rpa_payload = sign_payload(rpa_payload)
                 return self._send_request(self.rpa_bridge_url, signed_rpa_payload, route)
@@ -46,10 +45,6 @@ class EcosystemDispatcher:
             return False
 
     def _format_for_legacy_rpa(self, payload: dict) -> dict:
-        """
-        Flattens complex nested JSON payloads into a strict, single-level
-        dictionary required by legacy RPA queue managers.
-        """
         logger.info("Transforming payload schema for legacy RPA bot compatibility...")
         return {
             "RPA_Task_ID": f"JOB-{int(time.time())}",
@@ -69,11 +64,11 @@ class EcosystemDispatcher:
         logger.info(f"Dispatching payload to {url}...")
 
         try:
-            # Enforce a strict 10-second timeout to prevent UI thread locking
             response = requests.post(url, json=payload, timeout=10.0)
             response.raise_for_status()
 
             logger.info(f"Success! Server responded with HTTP {response.status_code}")
+            st.success(f"Successfully dispatched payload to {route}!")
             return True
 
         except requests.exceptions.Timeout:
