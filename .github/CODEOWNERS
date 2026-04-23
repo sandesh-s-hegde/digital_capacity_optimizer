@@ -1,0 +1,6 @@
+# Default owner for the entire repository
+* @sandesh-s-hegde
+
+# Specifically protect the database engine and security layer
+/core/      @sandesh-s-hegde
+/db_manager.py @sandesh-s-hegde
