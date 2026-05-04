@@ -2,8 +2,10 @@ import os
 import time
 import google.generativeai as genai
 from dotenv import load_dotenv
+from agent_tools import check_grid_emissions
 
 load_dotenv()
+
 
 def chat_with_data(user_query, chat_history, df, metrics):
     api_key = os.getenv("GEMINI_API_KEY")
@@ -54,10 +56,17 @@ def chat_with_data(user_query, chat_history, df, metrics):
 
         system_instruction = """
         You are a quantitative research assistant for a Logistics Service Provider.
+
+        [SUSTAINABILITY PROTOCOL]
+        Before making any final routing, capacity, or dispatch decision, you MUST use the `check_grid_emissions` tool to evaluate the carbon intensity of the destination region.
+        - If the grid status is GREEN, proceed with the dispatch recommendation.
+        - If the grid status is AMBER or RED, you must actively suggest an alternative route or delay the dispatch to prioritize renewable energy usage.
+
         Formatting constraints:
         - Never use unescaped '$' signs for currency. Use 'USD' or escape it as '\$'.
         - Use standard markdown for lists and emphasis.
         - Only use standard LaTeX notation for complex mathematical formulas.
+
         Behavioral constraints:
         - Limit responses strictly to supply chain, operations research, and financial risk topics.
         - Ground all strategic advice in the provided numerical context and time-series trends.
@@ -66,7 +75,8 @@ def chat_with_data(user_query, chat_history, df, metrics):
 
         model = genai.GenerativeModel(
             model_name="gemini-2.5-flash",
-            system_instruction=system_instruction
+            system_instruction=system_instruction,
+            tools=[check_grid_emissions]
         )
 
         clean_history = [
