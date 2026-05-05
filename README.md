@@ -140,13 +140,20 @@ To bypass standard cloud-provider limitations and ensure high availability, this
 * **Storage/Database:** Neon Serverless PostgreSQL (Frankfurt Region)
 
 ### 💾 Data Hydration
-The production database is hydrated using a custom vectorized NumPy simulation generating 5-years of global supply chain telemetry (18,000+ records). 
+The production database is hydrated using a custom vectorized NumPy simulation generating 5-years of global supply chain telemetry (18,000+ records).
 To re-seed the database:
 ```bash
 python database_schema.py
 python seed_data.py
 
 ```
+
+### 🧠 Autonomous Tool Calling Architecture
+This repository utilizes the `gemini-2.5-flash` model functioning as an autonomous agent. Instead of relying solely on static training data, the AI is equipped with external **Tools**.
+
+### 🌱 The Sustainability Protocol
+The AI is strictly bound by a system prompt that mandates environmental checks prior to routing. When a user requests a dispatch, the AI autonomously pauses text generation, executes the `check_grid_emissions` python function to query the external **ESG Grid Oracle**, parses the JSON response, and resumes generation to formulate a carbon-aware routing strategy.
+
 ---
 
 ## 📄 Citation
