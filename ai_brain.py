@@ -63,7 +63,7 @@ def chat_with_data(user_query, chat_history, df, metrics):
         - If the grid status is AMBER or RED, you must actively suggest an alternative route or delay the dispatch to prioritize renewable energy usage.
 
         Formatting constraints:
-        - Never use unescaped '$' signs for currency. Use 'USD' or escape it as '\$'.
+        - Never use unescaped '$' signs for currency. Use 'USD' or escape it as '\\$'.
         - Use standard markdown for lists and emphasis.
         - Only use standard LaTeX notation for complex mathematical formulas.
 
@@ -85,7 +85,10 @@ def chat_with_data(user_query, chat_history, df, metrics):
             if msg.get('parts')
         ]
 
-        chat = model.start_chat(history=clean_history)
+        chat = model.start_chat(
+            history=clean_history,
+            enable_automatic_function_calling=True
+        )
         prompt = f"{data_context}\n\nUSER QUESTION: {user_query}"
 
         for attempt in range(3):

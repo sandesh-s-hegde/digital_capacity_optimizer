@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore")
+
 import pandas as pd
 from ai_brain import chat_with_data
 
@@ -23,5 +26,5 @@ def main():
     print(f"[SYSTEM RESPONSE]:\n{response}")
 
 
-if main == "__main__":
+if __name__ == "__main__":
     main()
