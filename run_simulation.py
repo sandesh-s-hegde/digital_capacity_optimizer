@@ -16,7 +16,7 @@ def main():
     }
     mock_df = pd.DataFrame()
 
-    query = "I need to dispatch 5 refrigerated trucks to Germany (DE). Evaluate the route and check if the grid can support the load sustainably."
+    query = input("\n[ENTER DISPATCH REQUEST]: ")
 
     print(f"\n[USER]: {query}")
     print("\n[AGENT IS THINKING AND CALLING TOOLS...]\n")
