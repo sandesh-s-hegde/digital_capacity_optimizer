@@ -2,7 +2,7 @@
 
 **Author:** Sandesh Hegde
 
-**Version:** v5.1.0 (Serverless Edition)
+**Version:** v5.0.0 (Serverless Edition)
 
 ## 🚀 Live Demo
 
@@ -12,7 +12,7 @@
 
 ## 📖 Executive Summary
 
-This artifact operationalizes the **"Pixels to Premiums"** research framework, serving as a comprehensive **Decision Support System (DSS)** for Logistics Service Providers (LSPs). In its v5.1.0 iteration, it combines advanced **Risk Quantification**, **Geospatial Network Design**, **Global Observability**, and **Zero-Trust Tactical Execution** to solve for the "China Plus One" strategy, multi-modal routing constraints, and real-time operational bottlenecks.
+This artifact operationalizes the **"Pixels to Premiums"** research framework, serving as a comprehensive **Decision Support System (DSS)** for Logistics Service Providers (LSPs). In its v5.0.0 iteration, it combines advanced **Risk Quantification**, **Geospatial Network Design**, **Global Observability**, and **Zero-Trust Tactical Execution** to solve for the "China Plus One" strategy, multi-modal routing constraints, and real-time operational bottlenecks.
 
 ---
 
@@ -162,7 +162,7 @@ If you use this software in your research, please cite it as follows:
 
 **Harvard Style:**
 
-> Hegde, S.S. (2026). LSP Digital Capacity Twin: Multi-Modal Stochastic Engine (Version 5.1.0) [Software]. Available at: [https://github.com/sandesh-s-hegde/digital_capacity_optimizer](https://github.com/sandesh-s-hegde/digital_capacity_optimizer)
+> Hegde, S.S. (2026). LSP Digital Capacity Twin: Multi-Modal Stochastic Engine (Version 5.0.0) [Software]. Available at: [https://github.com/sandesh-s-hegde/digital_capacity_optimizer](https://github.com/sandesh-s-hegde/digital_capacity_optimizer)
 
 **BibTeX:**
 
@@ -172,7 +172,7 @@ If you use this software in your research, please cite it as follows:
   month = apr,
   title = {LSP Digital Capacity Twin: Multi-Modal Stochastic Engine},
   url = {([https://github.com/sandesh-s-hegde/digital_capacity_optimizer](https://github.com/sandesh-s-hegde/digital_capacity_optimizer))},
-  version = {5.1.0},
+  version = {5.0.0},
   year = {2026}
 }
 

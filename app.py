@@ -125,7 +125,7 @@ partner_cost = st.sidebar.number_input("Partner Surcharge ($)", value=5.0)
 sim_sla = st.sidebar.slider("Target Service Level (%)", 50, 99, 95, 1)
 
 st.sidebar.divider()
-st.sidebar.caption("LSP Digital Twin | v5.1.0 | System: Frankfurt | Status: Online")
+st.sidebar.caption("LSP Digital Twin | v5.0.0 | System: Frankfurt | Status: Online")
 
 st.title("🚛 LSP Digital Capacity Twin")
 
