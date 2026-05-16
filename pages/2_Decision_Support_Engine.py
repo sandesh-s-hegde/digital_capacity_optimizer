@@ -1,9 +1,9 @@
 import streamlit as st
 from services.agentic_broker import SupplyChainAgent
 
-st.set_page_config(page_title="AI Agentic Broker", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Decision Support Engine", page_icon="⚙️", layout="wide")
 
-st.title("🤖 Autonomous Agentic Broker")
+st.title("⚙️ Decision Support Engine")
 st.markdown("""
 **Stochastic Negotiation Layer:** Describe a supply chain disruption in plain English. 
 The Gemini AI agent will parse the context, determine the required capacity, and automatically route a strict JSON payload to the deterministic execution engine.
@@ -19,7 +19,7 @@ agent = get_agent()
 
 disruption_text = st.text_area(
     "Describe the Disruption Event",
-    value="Port strike in Rotterdam just halted our maritime freight. We urgently need to secure 12 containers via our RPA legacy carriers before prices spike.",
+    placeholder="Port strike in Rotterdam just halted our maritime freight. We urgently need to secure 12 containers via our RPA legacy carriers before prices spike.",
     height=150
 )
 
