@@ -81,7 +81,7 @@ def render_tactical_execution_ui(key_prefix="default"):
             min_value=1,
             value=5,
             key=f"{key_prefix}_assets",
-            help="Specify the exact number of physical assets to procure via the external API." # <-- Add this line
+            help="Specify the exact number of physical assets to procure via the external API."
         )
 
     if st.button("🚀 Dispatch Booking Webhook", type="primary", key=f"{key_prefix}_btn"):
