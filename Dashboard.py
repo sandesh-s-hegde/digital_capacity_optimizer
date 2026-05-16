@@ -587,7 +587,9 @@ if df is not None and not df.empty:
                     else:
                         o_q = urllib.parse.quote(res['origin']['name'])
                         d_q = urllib.parse.quote(res['dest']['name'])
+    
                         embed_url = f"https://www.google.com/maps/embed/v1/directions?key={api_key}&origin={o_q}&destination={d_q}&mode=driving"
+    
                         st.components.v1.iframe(embed_url, height=700)
                 else:
                     st.info("Enter origin and destination to visualize the trade lane.")
