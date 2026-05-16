@@ -18,4 +18,4 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # Execute Streamlit server bound to the dynamic cloud port
-CMD sh -c "streamlit run app.py --server.port $PORT --server.address 0.0.0.0"
+CMD sh -c "streamlit run Dashboard.py --server.port $PORT --server.address 0.0.0.0"
